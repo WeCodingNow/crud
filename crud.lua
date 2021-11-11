@@ -3,6 +3,7 @@
 -- @module crud
 
 local insert = require('crud.insert')
+local batch_insert = require('crud.batch_insert')
 local replace = require('crud.replace')
 local get = require('crud.get')
 local update = require('crud.update')
@@ -27,6 +28,14 @@ crud.insert = insert.tuple
 -- @refer insert.object
 -- @function insert_object
 crud.insert_object = insert.object
+
+-- @refer batch_insert.tuples_batch
+-- @function batch_insert
+crud.batch_insert = batch_insert.tuples_batch
+
+-- @refer batch_insert.objects_batch
+-- @function batch_insert_object
+crud.batch_insert_object = batch_insert.objects_batch
 
 -- @refer get.call
 -- @function get
@@ -105,6 +114,7 @@ function crud.init_storage()
     end
 
     insert.init()
+    batch_insert.init()
     get.init()
     replace.init()
     update.init()

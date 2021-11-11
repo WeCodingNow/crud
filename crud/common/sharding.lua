@@ -2,6 +2,7 @@ local vshard = require('vshard')
 local errors = require('errors')
 
 local BucketIDError = errors.new_class("BucketIDError", {capture_stack = false})
+local GetReplicasetsError = errors.new_class("GetReplicasetsError", {capture_stack = false})
 
 local utils = require('crud.common.utils')
 local sharding_key_module = require('crud.common.sharding_key')
@@ -63,6 +64,28 @@ function sharding.tuple_set_and_return_bucket_id(tuple, space, specified_bucket_
     end
 
     return bucket_id
+end
+
+function sharding.split_tuples_by_replicaset(tuples, space)
+    local batches = {}
+
+    for _, tuple in ipairs(tuples) do
+        local bucket_id, err = sharding.tuple_set_and_return_bucket_id(tuple, space)
+        if err ~= nil then
+            return nil, BucketIDError:new("Failed to get bucket ID: %s", err)
+        end
+
+        local replicaset, err = vshard.router.route(bucket_id)
+        if replicaset == nil then
+            return nil, GetReplicasetsError:new("Failed to get replicaset for bucket_id %s: %s", bucket_id, err.err)
+        end
+
+        local tuples_by_replicaset = batches[replicaset] or {}
+        table.insert(tuples_by_replicaset, tuple)
+        batches[replicaset] = tuples_by_replicaset
+    end
+
+    return batches
 end
 
 return sharding

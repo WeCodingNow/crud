@@ -606,4 +606,17 @@ function utils.merge_options(opts_a, opts_b)
     return fun.chain(opts_a or {}, opts_b or {}):tomap()
 end
 
+function utils.table_extend(list, values)
+    if values == nil then
+        return list
+    end
+
+    list = list or {}
+
+    return fun.reduce(
+        function(list, value) table.insert(list, value) return list end,
+        list, pairs(values)
+    )
+end
+
 return utils

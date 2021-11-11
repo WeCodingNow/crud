@@ -64,6 +64,40 @@ local function wrap_vshard_err(err, func_name, replicaset_uuid, bucket_id)
     ))
 end
 
+function call.batch(futures_by_replicasets, func_name, timeout)
+    dev_checks('table', 'string', '?number')
+
+    local timeout = timeout or call.DEFAULT_VSHARD_CALL_TIMEOUT
+    local errs
+
+    local results = {}
+    local deadline = fiber_clock() + timeout
+    for replicaset_uuid, future in pairs(futures_by_replicasets) do
+        local wait_timeout = deadline - fiber_clock()
+        if wait_timeout < 0 then
+            wait_timeout = 0
+        end
+
+        local result, err = future:wait_result(wait_timeout)
+        if err == nil and result[1] == nil then
+            err = result[2]
+        end
+
+        if err ~= nil then
+            local err_obj = wrap_vshard_err(err.err or err, func_name, replicaset_uuid)
+            err_obj.tuple = err.tuple
+
+            errs = errs or {}
+            table.insert(errs, err_obj)
+        else
+            table.insert(results, result)
+        end
+
+    end
+
+    return results, errs
+end
+
 function call.map(func_name, func_args, opts)
     dev_checks('string', '?table', {
         mode = 'string',

@@ -153,6 +153,86 @@ crud.insert_object('customers', {
 ...
 ```
 
+### Batch insert
+
+Right now CRUD cannot provide batch insert with full consistency.
+CRUD offers batch insert with partial consistency. That means
+that full consistency can be provided only on single replicaset
+using `box` transactions.
+
+```lua
+-- Batch insert tuples
+local result, err = crud.batch_insert(space_name, tuples, opts)
+-- Batch insert objects
+local result, err = crud.batch_insert_object(space_name, objects, opts)
+```
+
+where:
+
+* `space_name` (`string`) - name of the space to insert an object
+* `tuples` / `objects` (`table`) - array of tuples/objects to insert
+* `opts`:
+  * `timeout` (`?number`) - `vshard.call` timeout (in seconds)
+  * `fields` (`?table`) - field names for getting only a subset of fields
+
+Returns metadata and array contains inserted rows, array of errors (
+one error corresponds to one replicaset for which the error occurred).
+Error object can contain `tuple` field. This field contains the tuple
+for which the error occurred.
+
+**Example:**
+
+```lua
+crud.batch_insert('customers', {
+  {1, box.NULL, 'Elizabeth', 23},
+  {2, box.NULL, 'Anastasia', 22},
+})
+---
+- metadata:
+  - {'name': 'id', 'type': 'unsigned'}
+  - {'name': 'bucket_id', 'type': 'unsigned'}
+  - {'name': 'name', 'type': 'string'}
+  - {'name': 'age', 'type': 'number'}
+  rows:
+  - [1, 477, 'Elizabeth', 23]
+  - [2, 401, 'Anastasia', 22]
+...
+crud.batch_insert_object('customers', {
+    {id = 3, name = 'Elizabeth', age = 24},
+    {id = 10, name = 'Anastasia', age = 21},
+})
+---
+- metadata:
+  - {'name': 'id', 'type': 'unsigned'}
+  - {'name': 'bucket_id', 'type': 'unsigned'}
+  - {'name': 'name', 'type': 'string'}
+  - {'name': 'age', 'type': 'number'}
+  rows:
+  - [3, 2804, 'Elizabeth', 24]
+  - [10, 569, 'Anastasia', 21]
+
+-- Partial success
+local res, errs = crud.batch_insert_object('customers', {
+    {id = 22, name = 'Alex', age = 34},
+    {id = 3, name = 'Anastasia', age = 22},
+    {id = 5, name = 'Sergey', age = 25},
+})
+---
+res
+- metadata:
+  - {'name': 'id', 'type': 'unsigned'}
+  - {'name': 'bucket_id', 'type': 'unsigned'}
+  - {'name': 'name', 'type': 'string'}
+  - {'name': 'age', 'type': 'number'}
+  rows:
+  - [5, 1172, 'Sergey', 25],
+  - [22, 655, 'Alex', 34],
+
+errs
+- [err = 'Duplicate key exists ...', ..., tuple = [3, 2804, 'Anastasia', 22]]
+...
+```
+
 ### Get
 
 ```lua
