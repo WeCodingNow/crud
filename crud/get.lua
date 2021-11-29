@@ -20,7 +20,7 @@ local function get_on_storage(space_name, key, field_names)
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, GetError:new("Space %q doesn't exist", space_name)
+        return nil, GetError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     -- add_space_schema_hash is false because
@@ -52,7 +52,7 @@ local function call_get_on_router(space_name, key, opts)
 
     local space = utils.get_space(space_name, vshard.router.routeall())
     if space == nil then
-        return nil, GetError:new("Space %q doesn't exist", space_name), true
+        return nil, GetError:new(utils.space_doesnt_exist_msg(space_name)), true
     end
 
     if box.tuple.is(key) then

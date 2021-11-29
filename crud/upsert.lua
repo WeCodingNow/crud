@@ -23,7 +23,7 @@ local function upsert_on_storage(space_name, tuple, operations, opts)
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, UpsertError:new("Space %q doesn't exist", space_name)
+        return nil, UpsertError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     -- add_space_schema_hash is true only in case of upsert_object
@@ -57,7 +57,7 @@ local function call_upsert_on_router(space_name, tuple, user_operations, opts)
     end
 
     if space == nil then
-        return nil, UpsertError:new("Space %q doesn't exist", space_name), true
+        return nil, UpsertError:new(utils.space_doesnt_exist_msg(space_name)), true
     end
 
     local space_format = space:format()

@@ -100,7 +100,7 @@ local function build_select_iterator(space_name, user_conditions, opts)
 
     local space = utils.get_space(space_name, replicasets)
     if space == nil then
-        return nil, SelectError:new("Space %q doesn't exist", space_name), true
+        return nil, SelectError:new(utils.space_doesnt_exist_msg(space_name)), true
     end
     local space_format = space:format()
     local sharding_key_as_index_obj, err = sharding_key_module.fetch_on_router(space_name)

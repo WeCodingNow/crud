@@ -23,7 +23,7 @@ local function get_border_on_storage(border_name, space_name, index_id, field_na
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, BorderError:new("Space %q doesn't exist", space_name)
+        return nil, BorderError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     local index = space.index[index_id]
@@ -76,7 +76,7 @@ local function call_get_border_on_router(border_name, space_name, index_name, op
 
     local space = utils.get_space(space_name, vshard.router.routeall())
     if space == nil then
-        return nil, BorderError:new("Space %q doesn't exist", space_name), true
+        return nil, BorderError:new(utils.space_doesnt_exist_msg(space_name)), true
     end
 
     local index

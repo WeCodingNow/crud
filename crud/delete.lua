@@ -20,7 +20,7 @@ local function delete_on_storage(space_name, key, field_names)
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, DeleteError:new("Space %q doesn't exist", space_name)
+        return nil, DeleteError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     -- add_space_schema_hash is false because
@@ -49,7 +49,7 @@ local function call_delete_on_router(space_name, key, opts)
 
     local space = utils.get_space(space_name, vshard.router.routeall())
     if space == nil then
-        return nil, DeleteError:new("Space %q doesn't exist", space_name), true
+        return nil, DeleteError:new(utils.space_doesnt_exist_msg(space_name)), true
     end
 
     if box.tuple.is(key) then

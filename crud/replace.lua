@@ -24,7 +24,7 @@ local function replace_on_storage(space_name, tuple, opts)
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, ReplaceError:new("Space %q doesn't exist", space_name)
+        return nil, ReplaceError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     -- add_space_schema_hash is true only in case of replace_object
@@ -59,7 +59,7 @@ local function call_replace_on_router(space_name, tuple, opts)
     end
 
     if space == nil then
-        return nil, ReplaceError:new("Space %q doesn't exist", space_name), true
+        return nil, ReplaceError:new(utils.space_doesnt_exist_msg(space_name)), true
     end
 
     local bucket_id, err = sharding.tuple_set_and_return_bucket_id(tuple, space, opts.bucket_id)

@@ -48,7 +48,7 @@ end
 function utils.get_space_format(space_name, replicasets)
     local space = utils.get_space(space_name, replicasets)
     if space == nil then
-        return nil, GetSpaceFormatError:new("Space %q doesn't exist", space_name)
+        return nil, GetSpaceFormatError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     local space_format = space:format()
@@ -604,6 +604,10 @@ end
 -- If `opts_a.foo` and `opts_b.foo` exists, prefer `opts_b.foo`.
 function utils.merge_options(opts_a, opts_b)
     return fun.chain(opts_a or {}, opts_b or {}):tomap()
+end
+
+function utils.space_doesnt_exist_msg(space_name)
+    return ("Space %q doesn't exist"):format(space_name)
 end
 
 return utils

@@ -45,7 +45,7 @@ function len.call(space_name, opts)
 
     local space = utils.get_space(space_name, vshard.router.routeall())
     if space == nil then
-        return nil, LenError:new("Space %q doesn't exist", space_name)
+        return nil, LenError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     local results, err = vshard.router.map_callrw(LEN_FUNC_NAME, {space_name}, opts)

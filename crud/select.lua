@@ -42,7 +42,7 @@ local function select_on_storage(space_name, index_id, conditions, opts)
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, SelectError:new("Space %q doesn't exist", space_name)
+        return nil, SelectError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     local index = space.index[index_id]

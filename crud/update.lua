@@ -20,7 +20,7 @@ local function update_on_storage(space_name, key, operations, field_names)
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, UpdateError:new("Space %q doesn't exist", space_name)
+        return nil, UpdateError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     -- add_space_schema_hash is false because
@@ -75,7 +75,7 @@ local function call_update_on_router(space_name, key, user_operations, opts)
     end
 
     if space == nil then
-        return nil, UpdateError:new("Space %q doesn't exist", space_name), true
+        return nil, UpdateError:new(utils.space_doesnt_exist_msg(space_name)), true
     end
 
     local space_format = space:format()

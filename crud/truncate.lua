@@ -4,6 +4,7 @@ local vshard = require('vshard')
 
 local dev_checks = require('crud.common.dev_checks')
 local call = require('crud.common.call')
+local utils = require('crud.common.utils')
 
 local TruncateError = errors.new_class('TruncateError', {capture_stack = false})
 
@@ -16,7 +17,7 @@ local function truncate_on_storage(space_name)
 
     local space = box.space[space_name]
     if space == nil then
-        return nil, TruncateError:new("Space %q doesn't exist", space_name)
+        return nil, TruncateError:new(utils.space_doesnt_exist_msg(space_name))
     end
 
     return space:truncate()
