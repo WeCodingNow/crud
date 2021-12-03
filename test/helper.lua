@@ -401,4 +401,14 @@ function helpers.is_space_exist(router, space_name)
     return res
 end
 
+function helpers.get_map_reduces_stat(router, space_name)
+    return router:eval([[
+        local stats = require('crud').stats(...)
+        if stats == nil or stats.select == nil then
+            return 0
+        end
+        return stats.select.details.map_reduces
+    ]], { space_name })
+end
+
 return helpers
