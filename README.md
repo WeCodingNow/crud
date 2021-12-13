@@ -586,6 +586,77 @@ crud.len('customers')
 ...
 ```
 
+### Statistics
+
+`crud` routers can provide statistics on called operations.
+```lua
+-- Enable statistics collect.
+crud.enable_stats()
+
+-- Returns table with statistics information.
+crud.stats()
+
+-- Returns table with statistics information for specific space.
+crud.stats('my_space')
+
+-- Disables statistics collect and destroys all collectors.
+crud.disable_stats()
+
+-- Destroys all statistics collectors and creates them again.
+crud.reset_stats()
+```
+
+Format is as follows.
+```lua
+crud.stats()
+---
+- spaces:
+    my_space:
+      insert:
+        ok:
+          latency: 0.002
+          count: 19800
+          time: 39.6
+        error:
+          latency: 0.000001
+          count: 4
+          time: 0.000004
+  space_not_found: 0
+...
+crud.stats('my_space')
+---
+- insert:
+    ok:
+      latency: 0.002
+      count: 19800
+      time: 39.6
+    error:
+      latency: 0.000001
+      count: 4
+      time: 0.000004
+...
+```
+`spaces` section contains statistics for each observed space.
+If operation has never been called for space, corresponding
+field will be empty. If no operations has been called for a
+space, it will not be represented. Operations called for
+spaces not found both on storages and in statistics registry
+(including cases when crud can't verify space existence)
+will increment `space_not_found` counter.
+
+Possible statistics operation labels are
+`insert` (for `insert` and `insert_object` calls),
+`get`, `replace`  (for `replace` and `replace_object` calls), `update`,
+`upsert` (for `upsert` and `upsert_object` calls), `delete`,
+`select` (for `select` and `pairs` calls), `truncate`, `len` and
+`borders` (for `min` and `max` calls).
+
+Each operation section contains of different collectors
+for success calls and error (both error throw and `nil, err`)
+returns. `count` is total requests count since instance start
+or stats restart. `latency` is average time of requests execution,
+`time` is total time of requests execution.
+
 ## Cartridge roles
 
 `cartridge.roles.crud-storage` is a Tarantool Cartridge role that depends on the

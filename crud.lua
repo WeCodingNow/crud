@@ -14,6 +14,7 @@ local len = require('crud.len')
 local borders = require('crud.borders')
 local sharding_key = require('crud.common.sharding_key')
 local utils = require('crud.common.utils')
+local stats = require('crud.stats.module')
 
 local crud = {}
 
@@ -22,47 +23,47 @@ local crud = {}
 
 -- @refer insert.tuple
 -- @function insert
-crud.insert = insert.tuple
+crud.insert = stats.wrap(insert.tuple, stats.op.INSERT)
 
 -- @refer insert.object
 -- @function insert_object
-crud.insert_object = insert.object
+crud.insert_object = stats.wrap(insert.object, stats.op.INSERT)
 
 -- @refer get.call
 -- @function get
-crud.get = get.call
+crud.get = stats.wrap(get.call, stats.op.GET)
 
 -- @refer replace.tuple
 -- @function replace
-crud.replace = replace.tuple
+crud.replace = stats.wrap(replace.tuple, stats.op.REPLACE)
 
 -- @refer replace.object
 -- @function replace_object
-crud.replace_object = replace.object
+crud.replace_object = stats.wrap(replace.object, stats.op.REPLACE)
 
 -- @refer update.call
 -- @function update
-crud.update = update.call
+crud.update = stats.wrap(update.call, stats.op.UPDATE)
 
 -- @refer upsert.tuple
 -- @function upsert
-crud.upsert = upsert.tuple
+crud.upsert = stats.wrap(upsert.tuple, stats.op.UPSERT)
 
 -- @refer upsert.object
 -- @function upsert
-crud.upsert_object = upsert.object
+crud.upsert_object = stats.wrap(upsert.object, stats.op.UPSERT)
 
 -- @refer delete.call
 -- @function delete
-crud.delete = delete.call
+crud.delete = stats.wrap(delete.call, stats.op.DELETE)
 
 -- @refer select.call
 -- @function select
-crud.select = select.call
+crud.select = stats.wrap(select.call, stats.op.SELECT)
 
 -- @refer select.pairs
 -- @function pairs
-crud.pairs = select.pairs
+crud.pairs = stats.wrap(select.pairs, stats.op.SELECT, { pairs = true })
 
 -- @refer utils.unflatten_rows
 -- @function unflatten_rows
@@ -70,19 +71,19 @@ crud.unflatten_rows = utils.unflatten_rows
 
 -- @refer truncate.call
 -- @function truncate
-crud.truncate = truncate.call
+crud.truncate = stats.wrap(truncate.call, stats.op.TRUNCATE)
 
 -- @refer len.call
 -- @function len
-crud.len = len.call
+crud.len = stats.wrap(len.call, stats.op.LEN)
 
 -- @refer borders.min
 -- @function min
-crud.min = borders.min
+crud.min = stats.wrap(borders.min, stats.op.BORDERS)
 
 -- @refer borders.max
 -- @function max
-crud.max = borders.max
+crud.max = stats.wrap(borders.max, stats.op.BORDERS)
 
 -- @refer utils.cut_rows
 -- @function cut_rows
@@ -91,6 +92,22 @@ crud.cut_rows = utils.cut_rows
 -- @refer utils.cut_objects
 -- @function cut_objects
 crud.cut_objects = utils.cut_objects
+
+-- @refer stats.enable
+-- @function enable_stats
+crud.enable_stats = stats.enable
+
+-- @refer stats.get
+-- @function stats
+crud.stats = stats.get
+
+-- @refer stats.disable
+-- @function disable_stats
+crud.disable_stats = stats.disable
+
+-- @refer stats.reset
+-- @function reset_stats
+crud.reset_stats = stats.reset
 
 --- Initializes crud on node
 --
