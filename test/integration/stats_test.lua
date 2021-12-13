@@ -421,7 +421,7 @@ for name, case in pairs(unknown_space_cases) do
     local test_name = ('test_%s_on_unknown_space'):format(name)
 
     g[test_name] = function(g)
-        -- Collect statss before call.
+        -- Collect stats before call.
         local stats_before = g:get_stats()
         t.assert_type(stats_before, 'table')
 
@@ -443,5 +443,120 @@ for name, case in pairs(unknown_space_cases) do
             "space_not_found statistic incremented")
         t.assert_equals(stats_after.spaces, stats_before.spaces,
             "Existing spaces stats haven't changed")
+    end
+end
+
+local prepare_select_data = function(g)
+    helpers.insert_objects(g, space_name, {
+        -- Storage is s-2.
+        {
+            id = 1, name = "Elizabeth", last_name = "Jackson",
+            age = 12, city = "New York",
+        },
+        -- Storage is s-2.
+        {
+            id = 2, name = "Mary", last_name = "Brown",
+            age = 46, city = "Los Angeles",
+        },
+        -- Storage is s-1.
+        {
+            id = 3, name = "David", last_name = "Smith",
+            age = 33, city = "Los Angeles",
+        },
+        -- Storage is s-2.
+        {
+            id = 4, name = "William", last_name = "White",
+            age = 81, city = "Chicago",
+        }
+    })
+end
+
+local select_cases = {
+    select_by_primary_index = {
+        func = 'crud.select',
+        conditions = {{ '==', 'id_index', 3 }},
+        map_reduces = 0,
+        tuples_fetched = 1,
+        tuples_lookup = 1,
+    },
+    select_by_secondary_index = {
+        func = 'crud.select',
+        conditions = {{ '==', 'age_index', 46 }},
+        map_reduces = 1,
+        tuples_fetched = 1,
+        tuples_lookup = 1,
+    },
+    select_full_scan = {
+        func = 'crud.select',
+        conditions = {{ '>', 'id_index', 0 }, { '==', 'city', 'Kyoto' }},
+        map_reduces = 1,
+        tuples_fetched = 0,
+        tuples_lookup = 4,
+    },
+    pairs_by_primary_index = {
+        eval = eval.pairs,
+        conditions = {{ '==', 'id_index', 3 }},
+        map_reduces = 0,
+        tuples_fetched = 1,
+        tuples_lookup = 1,
+    },
+    pairs_by_secondary_index = {
+        eval = eval.pairs,
+        conditions = {{ '==', 'age_index', 46 }},
+        map_reduces = 1,
+        tuples_fetched = 1,
+        tuples_lookup = 1,
+    },
+    pairs_full_scan = {
+        eval = eval.pairs,
+        conditions = {{ '>', 'id_index', 0 }, { '==', 'city', 'Kyoto' }},
+        map_reduces = 1,
+        tuples_fetched = 0,
+        tuples_lookup = 4,
+    },
+}
+
+for name, case in pairs(select_cases) do
+    local test_name = ('test_%s_details'):format(name)
+
+    g.before_test(test_name, prepare_select_data)
+
+    g[test_name] = function(g)
+        local op = 'select'
+        local space_name = space_name
+
+        -- Collect stats before call.
+        local stats_before = g:get_stats(space_name)
+        t.assert_type(stats_before, 'table')
+
+        -- Call operation.
+        local _, err
+        if case.eval ~= nil then
+            _, err = g.router:eval(case.eval, { space_name, case.conditions })
+        else
+            _, err = g.router:call(case.func, { space_name, case.conditions })
+        end
+
+        t.assert_equals(err, nil)
+
+        -- Collect stats after call.
+        local stats_after = g:get_stats(space_name)
+        t.assert_type(stats_after, 'table')
+
+        local op_before = get_before_stats(stats_before, op)
+        local details_before = op_before.details
+        local details_after = stats_after[op].details
+
+        local tuples_fetched_diff = details_after.tuples_fetched - details_before.tuples_fetched
+        t.assert_equals(tuples_fetched_diff, case.tuples_fetched,
+            'Expected count of tuples fetched')
+
+        local tuples_lookup_diff = details_after.tuples_lookup - details_before.tuples_lookup
+        t.assert_equals(tuples_lookup_diff, case.tuples_lookup,
+            'Expected count of tuples looked up on storage')
+
+        local map_reduces_diff = details_after.map_reduces - details_before.map_reduces
+        t.assert_equals(map_reduces_diff, case.map_reduces,
+            'Expected count of map reduces planned')
     end
 end

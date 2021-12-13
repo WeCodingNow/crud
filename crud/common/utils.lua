@@ -1,5 +1,6 @@
 local errors = require('errors')
 local ffi = require('ffi')
+local fiber = require('fiber')
 local vshard = require('vshard')
 local fun = require('fun')
 
@@ -608,6 +609,26 @@ end
 
 function utils.space_doesnt_exist_msg(space_name)
     return ("Space %q doesn't exist"):format(space_name)
+end
+
+-- Do nothing.
+function utils.pass() end
+
+function utils.init_context_section(section)
+    local storage = fiber.self().storage
+    if storage[section] == nil then
+        storage[section] = {}
+    end
+
+    return storage[section]
+end
+
+function utils.get_context_section(section)
+    return fiber.self().storage[section]
+end
+
+function utils.drop_context_section(section)
+    fiber.self().storage[section] = nil
 end
 
 return utils

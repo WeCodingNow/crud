@@ -1,4 +1,5 @@
 local dev_checks = require('crud.common.dev_checks')
+local op_module = require('crud.stats.operation')
 local registry_common = require('crud.stats.registry_common')
 
 local registry = {}
@@ -117,6 +118,58 @@ end
 --
 function registry.observe_space_not_found()
     internal_registry.space_not_found = internal_registry.space_not_found + 1
+
+    return true
+end
+
+--- Increase statistics of storage select/pairs calls
+--
+-- @function observe_fetch
+--
+-- @tparam string space_name
+--  Name of space.
+--
+-- @tparam number tuples_fetched
+--  Count of tuples fetched during storage call.
+--
+-- @tparam number tuples_lookup
+--  Count of tuples looked up on storages while collecting response.
+--
+-- @treturn boolean Returns true.
+--
+function registry.observe_fetch(tuples_fetched, tuples_lookup, space_name)
+    dev_checks('number', 'number', 'string')
+
+    local op = op_module.SELECT
+    registry_common.init_collectors_if_required(internal_registry.spaces, space_name, op)
+    local collectors = internal_registry.spaces[space_name][op].details
+
+    collectors.tuples_fetched = collectors.tuples_fetched + tuples_fetched
+    collectors.tuples_lookup = collectors.tuples_lookup + tuples_lookup
+
+    return true
+end
+
+--- Increase statistics of planned map reduces during select/pairs
+--
+-- @function observe_map_reduces
+--
+-- @tparam number count
+--  Count of map reduces planned.
+--
+-- @tparam string space_name
+--  Name of space.
+--
+-- @treturn boolean Returns true.
+--
+function registry.observe_map_reduces(count, space_name)
+    dev_checks('number', 'string')
+
+    local op = op_module.SELECT
+    registry_common.init_collectors_if_required(internal_registry.spaces, space_name, op)
+    local collectors = internal_registry.spaces[space_name][op].details
+
+    collectors.map_reduces = collectors.map_reduces + count
 
     return true
 end

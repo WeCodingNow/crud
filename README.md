@@ -657,6 +657,21 @@ returns. `count` is total requests count since instance start
 or stats restart. `latency` is average time of requests execution,
 `time` is total time of requests execution.
 
+`select` section additionally contains `details` collectors.
+```lua
+crud.stats('my_space').select.details
+---
+- map_reduces: 4
+  tuples_fetched: 10500
+  tuples_lookup: 238000
+...
+```
+`map_reduces` is a count of planned map reduces
+(including those not executed successfully). `tuples_fetched`
+is a count of tuples fetched from storages during execution,
+`tuples_lookup` is a count of tuples looked up on storages
+while collecting response for call.
+
 ## Cartridge roles
 
 `cartridge.roles.crud-storage` is a Tarantool Cartridge role that depends on the

@@ -8,6 +8,7 @@ local dev_checks = require('crud.common.dev_checks')
 local common = require('crud.select.compat.common')
 local schema = require('crud.common.schema')
 local sharding_key_module = require('crud.common.sharding_key')
+local stats = require('crud.stats.module')
 
 local compare_conditions = require('crud.compare.conditions')
 local select_plan = require('crud.select.plan')
@@ -111,6 +112,9 @@ local function build_select_iterator(space_name, user_conditions, opts)
         if err ~= nil then
             return nil, err, true
         end
+    else
+        local context_stats = utils.init_context_section('router_stats')
+        context_stats.map_reduces = 1
     end
 
     local tuples_limit = opts.first
@@ -142,7 +146,12 @@ local function build_select_iterator(space_name, user_conditions, opts)
     local merger = Merger.new(replicasets_to_select, space, plan.index_id,
             common.SELECT_FUNC_NAME,
             {space_name, plan.index_id, plan.conditions, select_opts},
-            {tarantool_iter = plan.tarantool_iter, field_names = plan.field_names, call_opts = opts.call_opts}
+            {
+                tarantool_iter = plan.tarantool_iter,
+                field_names = plan.field_names,
+                call_opts = opts.call_opts,
+                stats_callback = stats.get_fetch_callback(),
+            }
         )
 
     -- filter space format by plan.field_names (user defined fields + primary key + scan key)

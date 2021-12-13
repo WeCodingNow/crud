@@ -192,6 +192,19 @@ for name, case in pairs(observe_cases) do
                 },
                 'Other status collectors initialized after observations'
             )
+
+            -- SELECT collectors have additional details section.
+            if op == stats_module.op.SELECT then
+                t.assert_equals(
+                    op_stats.details,
+                    {
+                        tuples_fetched = 0,
+                        tuples_lookup = 0,
+                        map_reduces = 0,
+                    },
+                    'Detail collectors initialized after select observations'
+                )
+            end
         end
     end
 end
@@ -440,4 +453,46 @@ end
 g.test_enabling_stats_on_non_router_throws_error = function(g)
     local storage = g.cluster:server('s1-master').net_box
     t.assert_error(storage.eval, storage, " require('crud.stats.module').enable() ")
+end
+
+g.test_stats_fetch_callback = function(g)
+    local storage_cursor_stats = { tuples_fetched = 5, tuples_lookup = 25 }
+
+    g.router:eval([[ stats_module.get_fetch_callback()(...) ]],
+        { storage_cursor_stats, space_name })
+
+    local op = stats_module.op.SELECT
+    local stats = g:get_stats(space_name)
+
+    t.assert_not_equals(stats[op], nil,
+        'Fetch stats update inits SELECT collectors')
+
+    local details = stats[op].details
+
+    t.assert_equals(details.tuples_fetched, 5,
+        'tuples_fetched is inremented by expected value')
+    t.assert_equals(details.tuples_lookup, 25,
+        'tuples_lookup is inremented by expected value')
+end
+
+g.test_disable_stats_before_fetch_callback_get_do_not_break_call = function(g)
+    g:disable_stats()
+
+    local storage_cursor_stats = { tuples_fetched = 5, tuples_lookup = 25 }
+    g.router:eval([[ stats_module.get_fetch_callback()(...) ]],
+        { storage_cursor_stats, space_name })
+
+    t.success('No unexpected errors')
+end
+
+g.test_disable_stats_after_fetch_callback_get_do_not_break_call = function(g)
+    local storage_cursor_stats = { tuples_fetched = 5, tuples_lookup = 25 }
+
+    g.router:eval([[
+        local callback = stats_module.get_fetch_callback()
+        stats_module.disable()
+        callback(...)
+    ]], { storage_cursor_stats, space_name })
+
+    t.success('No unexpected errors')
 end

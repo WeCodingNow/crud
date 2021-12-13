@@ -93,6 +93,8 @@ local function fetch_chunk(context, state)
     local replicaset = context.replicaset
     local vshard_call_name = context.vshard_call_name
     local timeout = context.timeout or call.DEFAULT_VSHARD_CALL_TIMEOUT
+    local space_name = context.space_name
+    local stats_callback = context.stats_callback
     local future = state.future
 
     -- The source was entirely drained.
@@ -108,6 +110,14 @@ local function fetch_chunk(context, state)
 
     -- Decode metainfo, leave data to be processed by the merger.
     local cursor = decode_metainfo(buf)
+
+    -- Extract stats info.
+    -- Stats extracted with callback here and not passed
+    -- outside to wrapper because fetch for pairs can be
+    -- called even after pairs() return from generators.
+    if cursor.stats ~= nil and stats_callback ~= nil then
+        stats_callback(cursor.stats, space_name)
+    end
 
     -- Check whether we need the next call.
     if cursor.is_end then
@@ -137,6 +147,7 @@ local function new(replicasets, space, index_id, func_name, func_args, opts)
     opts = opts or {}
     local call_opts = opts.call_opts
     local mode = call_opts.mode or 'read'
+    local stats_callback = opts.stats_callback
     local vshard_call_name = call.get_vshard_call_name(mode, call_opts.prefer_replica, call_opts.balance)
 
     -- Request a first data chunk and create merger sources.
@@ -157,6 +168,8 @@ local function new(replicasets, space, index_id, func_name, func_args, opts)
             replicaset = replicaset,
             vshard_call_name = vshard_call_name,
             timeout = call_opts.timeout,
+            stats_callback = stats_callback,
+            space_name = space.name,
         }
         local state = {future = future}
         local source = merger_lib.new_buffer_source(fetch_chunk, context, state)

@@ -117,6 +117,8 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
         err = second_return_val
     end
 
+    local context_stats = utils.get_context_section('router_stats')
+
     -- If space not exists, do not build a separate collector for it.
     -- Call request for non-existing space will always result in error.
     -- The resulting overhead is insignificant for existing spaces:
@@ -143,6 +145,13 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
     end
 
     registry.observe(latency, space_name, op, status)
+
+    if context_stats ~= nil then
+        if context_stats.map_reduces ~= nil then
+            registry.observe_map_reduces(context_stats.map_reduces, space_name)
+        end
+        utils.drop_context_section('router_stats')
+    end
 
     :: return_values ::
 
@@ -200,6 +209,56 @@ function stats.wrap(func, op, opts)
             pcall(func, ...)
         )
     end
+end
+
+local storage_stats_schema = { tuples_fetched = 'number', tuples_lookup = 'number' }
+--- Callback to collect storage tuples stats (select/pairs)
+--
+-- @function update_fetch_stats
+--
+-- @tparam table storage_stats
+--  Statistics from select storage call.
+--
+--  @tfield number tuples_fetched
+--   Count of tuples fetched during storage call.
+--
+--  @tfield number tuples_lookup
+--   Count of tuples looked up on storages while collecting response.
+--
+-- @tparam string space_name
+--  Name of space.
+--
+-- @treturn boolean Returns true.
+--
+local function update_fetch_stats(storage_stats, space_name)
+    dev_checks(storage_stats_schema, 'string')
+
+    if not is_enabled then
+        return true
+    end
+
+    registry.observe_fetch(
+        storage_stats.tuples_fetched,
+        storage_stats.tuples_lookup,
+        space_name
+    )
+
+    return true
+end
+
+--- Returns callback to collect storage tuples stats (select/pairs)
+--
+-- @function get_fetch_callback
+--
+-- @treturn[1] function `update_fetch_stats` function to collect tuples stats.
+-- @treturn[2] function Dummy function, if stats disabled.
+--
+function stats.get_fetch_callback()
+    if not is_enabled then
+        return utils.pass
+    end
+
+    return update_fetch_stats
 end
 
 --- Table with CRUD operation lables

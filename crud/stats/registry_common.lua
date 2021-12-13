@@ -1,4 +1,5 @@
 local dev_checks = require('crud.common.dev_checks')
+local op_module = require('crud.stats.operation')
 
 local registry_common = {}
 
@@ -6,10 +7,17 @@ local registry_common = {}
 --
 -- @function build_collectors
 --
--- @treturn table Returns collectors for success and error requests.
---  Collectors store 'count', 'latency' and 'time' values.
+-- @tparam string op
+--  Label of registry collectors.
+--  Use `require('crud.stats.module').op` to pick one.
 --
-function registry_common.build_collectors()
+-- @treturn table Returns collectors for success and error requests.
+--  Collectors store 'count', 'latency' and 'time' values. Also
+--  returns additional collectors for select operation.
+--
+function registry_common.build_collectors(op)
+    dev_checks('string')
+
     local collectors = {
         ok = {
             count = 0,
@@ -22,6 +30,14 @@ function registry_common.build_collectors()
             time = 0,
         },
     }
+
+    if op == op_module.SELECT then
+        collectors.details = {
+            tuples_fetched = 0,
+            tuples_lookup = 0,
+            map_reduces = 0,
+        }
+    end
 
     return collectors
 end
@@ -49,7 +65,7 @@ function registry_common.init_collectors_if_required(spaces, space_name, op)
 
     local space_collectors = spaces[space_name]
     if space_collectors[op] == nil then
-        space_collectors[op] = registry_common.build_collectors()
+        space_collectors[op] = registry_common.build_collectors(op)
     end
 end
 

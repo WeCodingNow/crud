@@ -76,6 +76,9 @@ local function select_on_storage(space_name, index_id, conditions, opts)
         cursor = make_cursor(tuples)
     end
 
+    cursor.stats = utils.get_context_section('storage_stats')
+    utils.drop_context_section('storage_stats')
+
     -- getting tuples with user defined fields (if `fields` option is specified)
     -- and fields that are needed for comparison on router (primary key + scan key)
     return cursor, schema.filter_tuples_fields(tuples, opts.field_names)

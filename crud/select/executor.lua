@@ -68,12 +68,15 @@ function executor.execute(space, index, filter_func, opts)
 
     opts = opts or {}
 
+    local stats = utils.init_context_section('storage_stats')
+    stats.tuples_lookup = 0
+    stats.tuples_fetched = 0
+
     if opts.limit == 0 then
         return {}
     end
 
     local tuples = {}
-    local tuples_count = 0
 
     local value = opts.scan_value
     if opts.after_tuple ~= nil then
@@ -111,9 +114,9 @@ function executor.execute(space, index, filter_func, opts)
 
         if matched then
             table.insert(tuples, tuple)
-            tuples_count = tuples_count + 1
+            stats.tuples_fetched = stats.tuples_fetched + 1
 
-            if opts.limit ~= nil and tuples_count >= opts.limit then
+            if opts.limit ~= nil and stats.tuples_fetched >= opts.limit then
                 break
             end
         elseif early_exit then
@@ -121,6 +124,7 @@ function executor.execute(space, index, filter_func, opts)
         end
 
         gen.state, tuple = gen(gen.param, gen.state)
+        stats.tuples_lookup = stats.tuples_lookup + 1
     end
 
     return tuples
