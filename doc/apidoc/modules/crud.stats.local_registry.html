@@ -1,0 +1,413 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>CRUD API reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/crud.borders.html">crud.borders</a></li>
+  <li><a href="../modules/crud.cfg.html">crud.cfg</a></li>
+  <li><a href="../modules/crud.common.stash.html">crud.common.stash</a></li>
+  <li><a href="../modules/crud.delete.html">crud.delete</a></li>
+  <li><a href="../modules/crud.get.html">crud.get</a></li>
+  <li><a href="../modules/crud.insert.html">crud.insert</a></li>
+  <li><a href="../modules/crud.len.html">crud.len</a></li>
+  <li><a href="../modules/crud.replace.html">crud.replace</a></li>
+  <li><a href="../modules/crud.select.html">crud.select</a></li>
+  <li><a href="../modules/crud.stats.html">crud.stats</a></li>
+  <li><strong>crud.stats.local_registry</strong></li>
+  <li><a href="../modules/crud.stats.metrics_registry.html">crud.stats.metrics_registry</a></li>
+  <li><a href="../modules/crud.stats.registry_utils.html">crud.stats.registry_utils</a></li>
+  <li><a href="../modules/crud.truncate.html">crud.truncate</a></li>
+  <li><a href="../modules/crud.update.html">crud.update</a></li>
+  <li><a href="../modules/crud.upsert.html">crud.upsert</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>crud.stats.local_registry</code></h1>
+<p>Internal module used to store statistics.</p>
+<p><table class="markdown_table">
+</table>
+</p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#init">init (opts)</a></td>
+	<td class="summary">Initialize local metrics registry.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#destroy">destroy ()</a></td>
+	<td class="summary">Destroy local metrics registry.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#get">get ([space_name])</a></td>
+	<td class="summary">Get copy of local metrics registry.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#observe">observe (space_name, latency, op, success)</a></td>
+	<td class="summary">Increase requests count and update latency info.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#observe_fetch">observe_fetch (space_name, tuples_fetched, tuples_lookup)</a></td>
+	<td class="summary">Increase statistics of storage select/pairs calls</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#observe_map_reduces">observe_map_reduces (count, space_name)</a></td>
+	<td class="summary">Increase statistics of planned map reduces during select/pairs</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function ">
+    <dt>
+    <a name="init"></a>
+    <strong>init (opts)</strong>
+    </dt>
+    <dd>
+    <p>Initialize local metrics registry. <table class="markdown_table">
+</table>
+<p>
+  Registries are not meant to used explicitly
+  by users, init is not guaranteed to be idempotent.
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">opts</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">tab</span></span>)
+            </span>
+
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        <ul>
+        <li><span class="parameter">quantiles</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">bool</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Quantiles is not supported for local, only <code>false</code> is valid.
+</p>
+        </span>
+        </li>
+        </li></ul>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns <code>true</code>.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="destroy"></a>
+    <strong>destroy ()</strong>
+    </dt>
+    <dd>
+    <p>Destroy local metrics registry. <table class="markdown_table">
+</table>
+<p>
+  Registries are not meant to used explicitly
+  by users, destroy is not guaranteed to be idempotent.
+</p>
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns <code>true</code>.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="get"></a>
+    <strong>get ([space_name])</strong>
+    </dt>
+    <dd>
+    <p>Get copy of local metrics registry. <table class="markdown_table">
+</table>
+<p>
+  Registries are not meant to used explicitly
+  by users, get is not guaranteed to work without init.
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">space_name</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  If specified, returns table with statistics
+  of operations on table, separated by operation type and
+  execution status. If there wasn't any requests for table,
+  returns <code>{}</code>. If not specified, returns table with statistics
+  about all observed spaces.
+</p>
+        </span>
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">table</span></span>
+        Returns copy of metrics registry (or registry section).
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="observe"></a>
+    <strong>observe (space_name, latency, op, success)</strong>
+    </dt>
+    <dd>
+    <p>Increase requests count and update latency info. <table class="markdown_table">
+</table>
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">space_name</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Name of space.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">latency</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">number</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Time of call execution.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">op</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Label of registry collectors.
+  Use <code>require('crud.stats').op</code> to pick one.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">success</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  <code>'ok'</code> if no errors on execution, <code>'error'</code> otherwise.
+</p>
+        </span>
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns <code>true</code>.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="observe_fetch"></a>
+    <strong>observe_fetch (space_name, tuples_fetched, tuples_lookup)</strong>
+    </dt>
+    <dd>
+    <p>Increase statistics of storage select/pairs calls <table class="markdown_table">
+</table>
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">space_name</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Name of space.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">tuples_fetched</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">number</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Count of tuples fetched during storage call.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">tuples_lookup</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">number</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Count of tuples looked up on storages while collecting response.
+</p>
+        </span>
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns true.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="observe_map_reduces"></a>
+    <strong>observe_map_reduces (count, space_name)</strong>
+    </dt>
+    <dd>
+    <p>Increase statistics of planned map reduces during select/pairs <table class="markdown_table">
+</table>
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">count</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">number</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Count of map reduces planned.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">space_name</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Name of space.
+</p>
+        </span>
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns true.
+    </ol>
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+</div> <!-- id="container" -->
+</body>
+</html>

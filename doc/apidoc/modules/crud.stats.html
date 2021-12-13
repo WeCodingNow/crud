@@ -1,0 +1,682 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>CRUD API reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+<li><a href="#Fields">Fields</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/crud.borders.html">crud.borders</a></li>
+  <li><a href="../modules/crud.cfg.html">crud.cfg</a></li>
+  <li><a href="../modules/crud.common.stash.html">crud.common.stash</a></li>
+  <li><a href="../modules/crud.delete.html">crud.delete</a></li>
+  <li><a href="../modules/crud.get.html">crud.get</a></li>
+  <li><a href="../modules/crud.insert.html">crud.insert</a></li>
+  <li><a href="../modules/crud.len.html">crud.len</a></li>
+  <li><a href="../modules/crud.replace.html">crud.replace</a></li>
+  <li><a href="../modules/crud.select.html">crud.select</a></li>
+  <li><strong>crud.stats</strong></li>
+  <li><a href="../modules/crud.stats.local_registry.html">crud.stats.local_registry</a></li>
+  <li><a href="../modules/crud.stats.metrics_registry.html">crud.stats.metrics_registry</a></li>
+  <li><a href="../modules/crud.stats.registry_utils.html">crud.stats.registry_utils</a></li>
+  <li><a href="../modules/crud.truncate.html">crud.truncate</a></li>
+  <li><a href="../modules/crud.update.html">crud.update</a></li>
+  <li><a href="../modules/crud.upsert.html">crud.upsert</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>crud.stats</code></h1>
+<p>CRUD statistics module.</p>
+<p><table class="markdown_table">
+</table>
+</p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#is_enabled">is_enabled ()</a></td>
+	<td class="summary">Check if statistics module was enabled.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#get_default_driver">get_default_driver ()</a></td>
+	<td class="summary">Get default statistics driver name.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#enable">enable ([opts])</a></td>
+	<td class="summary">Initializes statistics registry, enables callbacks and wrappers.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#reset">reset ()</a></td>
+	<td class="summary">Resets statistics registry.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#disable">disable ()</a></td>
+	<td class="summary">Destroys statistics registry and disable callbacks.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#get">get ([space_name])</a></td>
+	<td class="summary">Get statistics on CRUD operations.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#wrap">wrap (func, op[, opts])</a></td>
+	<td class="summary">Wrap CRUD operation call to collect statistics.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#get_fetch_callback">get_fetch_callback ()</a></td>
+	<td class="summary">Returns callback to collect storage tuples stats (select/pairs).</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#update_map_reduces">update_map_reduces (space_name)</a></td>
+	<td class="summary">Callback to collect planned map reduces stats (select/pairs).</td>
+	</tr>
+</table>
+<h2><a href="#Fields">Fields</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#op">op</a></td>
+	<td class="summary">Table with CRUD operation lables.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#internal">internal</a></td>
+	<td class="summary">Stats module internal state (for debug/test).</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function ">
+    <dt>
+    <a name="is_enabled"></a>
+    <strong>is_enabled ()</strong>
+    </dt>
+    <dd>
+    <p>Check if statistics module was enabled. <table class="markdown_table">
+</table>
+</p>
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns <code>true</code> or <code>false</code>.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="get_default_driver"></a>
+    <strong>get_default_driver ()</strong>
+    </dt>
+    <dd>
+    <p>Get default statistics driver name. <table class="markdown_table">
+</table>
+</p>
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">string</span></span>
+        <code>metrics</code> if supported, <code>local</code> if unsupported.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="enable"></a>
+    <strong>enable ([opts])</strong>
+    </dt>
+    <dd>
+    <p>Initializes statistics registry, enables callbacks and wrappers. <table class="markdown_table">
+</table>
+<p>
+  If already enabled, do nothing.
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">opts</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">tab</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        <ul>
+        <li><span class="parameter">driver</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  <code>'local'</code> or <code>'metrics'</code>.
+  If <code>'local'</code>, stores statistics in local registry (some Lua tables)
+  and computes latency as overall average. <code>'metrics'</code> requires
+  <code>metrics >= 0.9.0</code> installed and stores statistics in
+  global metrics registry (integrated with exporters).
+  <code>'metrics'</code> driver supports computing latency as 0.99 quantile with aging.
+  If <code>'metrics'</code> driver is available, it is used by default,
+  otherwise <code>'local'</code> is used.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">quantiles</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">bool</span></span>,
+                <em>default</em> false
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  If <code>'metrics'</code> driver used, you can enable
+  computing requests latency as 0.99 quantile with aging.
+  Performance overhead for enabling is near 10%.
+</p>
+        </span>
+        </li>
+        </li></ul>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns <code>true</code>.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="reset"></a>
+    <strong>reset ()</strong>
+    </dt>
+    <dd>
+    <p>Resets statistics registry. <table class="markdown_table">
+</table>
+<p>
+  After reset collectors are the same as right
+  after initial <code>stats.enable()</code>.
+</p>
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns true.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="disable"></a>
+    <strong>disable ()</strong>
+    </dt>
+    <dd>
+    <p>Destroys statistics registry and disable callbacks. <table class="markdown_table">
+</table>
+<p>
+  If already disabled, do nothing.
+</p>
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns true.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="get"></a>
+    <strong>get ([space_name])</strong>
+    </dt>
+    <dd>
+    <p>Get statistics on CRUD operations. <table class="markdown_table">
+</table>
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">space_name</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  If specified, returns table with statistics
+  of operations on space, separated by operation type and
+  execution status. If there wasn't any requests of "op" type
+  for space, there won't be corresponding collectors.
+  If not specified, returns table with statistics
+  about all observed spaces.
+</p>
+        </span>
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">table</span></span>
+         Statistics on CRUD operations.
+  If statistics disabled, returns <code>{}</code>.
+
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="wrap"></a>
+    <strong>wrap (func, op[, opts])</strong>
+    </dt>
+    <dd>
+    <p>Wrap CRUD operation call to collect statistics. <table class="markdown_table">
+</table>
+<p>
+  Approach based on <code>box.atomic()</code>:
+  https://github.com/tarantool/tarantool/blob/b9f7204b5e0d10b443c6f198e9f7f04e0d16a867/src/box/lua/schema.lua#L369
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">func</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">func</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Function to wrap. First argument is expected to
+  be a space name string. If statistics enabled,
+  errors are caught and thrown again.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">op</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Label of registry collectors.
+  Use <code>require('crud.stats').op</code> to pick one.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">opts</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">tab</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        <ul>
+        <li><span class="parameter">pairs</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">bool</span></span>,
+                <em>default</em> false
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  If false, wraps only function passed as argument.
+  Second return value of wrapped function is treated
+  as error (<code>nil, err</code> case).
+  If true, also wraps gen() function returned by
+  call. Statistics observed on cycle end (last
+  element was fetched or error was thrown). If pairs
+  cycle was interrupted with <code>break</code>, statistics will
+  be collected when pairs objects are cleaned up with
+  Lua garbage collector.
+</p>
+        </span>
+        </li>
+        </li></ul>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Wrapped function output.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="get_fetch_callback"></a>
+    <strong>get_fetch_callback ()</strong>
+    </dt>
+    <dd>
+    <p>Returns callback to collect storage tuples stats (select/pairs). <table class="markdown_table">
+</table>
+</p>
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">function</span></span>
+        <code>update_fetch_stats</code> function to collect tuples stats.
+    </ol>
+     <h3>Or</h3>
+    <ol>
+
+           <span class="types"><span class="type">function</span></span>
+        Dummy function, if stats disabled.
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="update_map_reduces"></a>
+    <strong>update_map_reduces (space_name)</strong>
+    </dt>
+    <dd>
+    <p>Callback to collect planned map reduces stats (select/pairs). <table class="markdown_table">
+</table>
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">space_name</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Name of space.
+</p>
+        </span>
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        Returns <code>true</code>.
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Fields"></a>Fields</h2>
+
+    <dl class="function ">
+    <dt>
+    <a name="op"></a>
+    <strong>op</strong>
+    </dt>
+    <dd>
+    <p>Table with CRUD operation lables. <table class="markdown_table">
+</table>
+</p>
+
+
+    <ul>
+        <li><span class="parameter">INSERT</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Identifies both <code>insert</code> and <code>insert_object</code>.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">GET</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">REPLACE</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Identifies both <code>replace</code> and <code>replace_object</code>.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">UPDATE</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">UPSERT</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Identifies both <code>upsert</code> and <code>upsert_object</code>.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">DELETE</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">SELECT</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Identifies both <code>pairs</code> and <code>select</code>.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">TRUNCATE</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">LEN</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">BORDERS</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Identifies both <code>min</code> and <code>max</code>.
+</p>
+        </span>
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name="internal"></a>
+    <strong>internal</strong>
+    </dt>
+    <dd>
+    <p>Stats module internal state (for debug/test). <table class="markdown_table">
+</table>
+</p>
+
+
+    <ul>
+        <li><span class="parameter">driver</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p> Current statistics registry driver (if nil, stats disabled).</p>
+        </span>
+        </li>
+        <li><span class="parameter">quantiles</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">boolean</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p> Is quantiles computed.</p>
+        </span>
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+</div> <!-- id="container" -->
+</body>
+</html>

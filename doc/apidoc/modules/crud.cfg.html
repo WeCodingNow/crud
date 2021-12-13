@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>CRUD API reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/crud.borders.html">crud.borders</a></li>
+  <li><strong>crud.cfg</strong></li>
+  <li><a href="../modules/crud.common.stash.html">crud.common.stash</a></li>
+  <li><a href="../modules/crud.delete.html">crud.delete</a></li>
+  <li><a href="../modules/crud.get.html">crud.get</a></li>
+  <li><a href="../modules/crud.insert.html">crud.insert</a></li>
+  <li><a href="../modules/crud.len.html">crud.len</a></li>
+  <li><a href="../modules/crud.replace.html">crud.replace</a></li>
+  <li><a href="../modules/crud.select.html">crud.select</a></li>
+  <li><a href="../modules/crud.stats.html">crud.stats</a></li>
+  <li><a href="../modules/crud.stats.local_registry.html">crud.stats.local_registry</a></li>
+  <li><a href="../modules/crud.stats.metrics_registry.html">crud.stats.metrics_registry</a></li>
+  <li><a href="../modules/crud.stats.registry_utils.html">crud.stats.registry_utils</a></li>
+  <li><a href="../modules/crud.truncate.html">crud.truncate</a></li>
+  <li><a href="../modules/crud.update.html">crud.update</a></li>
+  <li><a href="../modules/crud.upsert.html">crud.upsert</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>crud.cfg</code></h1>
+<p>Module for CRUD configuration.</p>
+<p><table class="markdown_table">
+</table>
+</p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#__call">__call (self[, opts])</a></td>
+	<td class="summary">Configure CRUD module.</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function ">
+    <dt>
+    <a name="__call"></a>
+    <strong>__call (self[, opts])</strong>
+    </dt>
+    <dd>
+    <p>Configure CRUD module. <table class="markdown_table">
+</table>
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">self</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">tab</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">opts</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">tab</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+
+        <br>
+        <span class="parameter-description">
+        <p><table class="markdown_table">
+</table>
+</p>
+        </span>
+        <ul>
+        <li><span class="parameter">stats</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">bool</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Enable or disable statistics collect.
+  Statistics are observed only on router instances.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">stats_driver</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  <code>'local'</code> or <code>'metrics'</code>.
+  If <code>'local'</code>, stores statistics in local registry (some Lua tables)
+  and computes latency as overall average. <code>'metrics'</code> requires
+  <code>metrics >= 0.10.0</code> installed and stores statistics in
+  global metrics registry (integrated with exporters).
+  <code>'metrics'</code> driver supports computing latency as 0.99 quantile with aging.
+  If <code>'metrics'</code> driver is available, it is used by default,
+  otherwise <code>'local'</code> is used.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">stats_quantiles</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">bool</span></span>,
+                <span class="parameter-modifier">
+                <em>optional</em>)
+                </span>
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Enable or disable statistics quantiles (only for metrics driver).
+  Quantiles computations increases performance overhead up to 10%.
+</p>
+        </span>
+        </li>
+        </li></ul>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Copy of configuration table.
+    </ol>
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+</div> <!-- id="container" -->
+</body>
+</html>

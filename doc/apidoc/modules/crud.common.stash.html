@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>CRUD API reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+<li><a href="#Tables">Tables</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/crud.borders.html">crud.borders</a></li>
+  <li><a href="../modules/crud.cfg.html">crud.cfg</a></li>
+  <li><strong>crud.common.stash</strong></li>
+  <li><a href="../modules/crud.delete.html">crud.delete</a></li>
+  <li><a href="../modules/crud.get.html">crud.get</a></li>
+  <li><a href="../modules/crud.insert.html">crud.insert</a></li>
+  <li><a href="../modules/crud.len.html">crud.len</a></li>
+  <li><a href="../modules/crud.replace.html">crud.replace</a></li>
+  <li><a href="../modules/crud.select.html">crud.select</a></li>
+  <li><a href="../modules/crud.stats.html">crud.stats</a></li>
+  <li><a href="../modules/crud.stats.local_registry.html">crud.stats.local_registry</a></li>
+  <li><a href="../modules/crud.stats.metrics_registry.html">crud.stats.metrics_registry</a></li>
+  <li><a href="../modules/crud.stats.registry_utils.html">crud.stats.registry_utils</a></li>
+  <li><a href="../modules/crud.truncate.html">crud.truncate</a></li>
+  <li><a href="../modules/crud.update.html">crud.update</a></li>
+  <li><a href="../modules/crud.upsert.html">crud.upsert</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>crud.common.stash</code></h1>
+<p>Module for preserving data between reloads.</p>
+<p><table class="markdown_table">
+</table>
+</p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#setup_cartridge_reload">setup_cartridge_reload ()</a></td>
+	<td class="summary">Setup Tarantool Cartridge reload.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#get">get (name)</a></td>
+	<td class="summary">Get a stash instance, initialize if needed.</td>
+	</tr>
+</table>
+<h2><a href="#Tables">Tables</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#name">name</a></td>
+	<td class="summary">Available stashes list.</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function ">
+    <dt>
+    <a name="setup_cartridge_reload"></a>
+    <strong>setup_cartridge_reload ()</strong>
+    </dt>
+    <dd>
+    <p>Setup Tarantool Cartridge reload. <table class="markdown_table">
+</table>
+<p>
+  Call on Tarantool Cartridge roles that are expected
+  to use stashes.
+</p>
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Returns
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name="get"></a>
+    <strong>get (name)</strong>
+    </dt>
+    <dd>
+    <p>Get a stash instance, initialize if needed. <table class="markdown_table">
+</table>
+<p>
+  Stashes are persistent to package reload.
+  To use them with Cartridge roles reload,
+  call <code>stash.setup_cartridge_reload</code> in role.
+</p>
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">name</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Stash identifier. Use one from <code>stash.name</code> table.
+</p>
+        </span>
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">table</span></span>
+        A stash instance.
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Tables"></a>Tables</h2>
+
+    <dl class="function ">
+    <dt>
+    <a name="name"></a>
+    <strong>name</strong>
+    </dt>
+    <dd>
+    <p>Available stashes list. <table class="markdown_table">
+</table>
+</p>
+
+
+    <h3>Fields:</h3>
+    <ul>
+        <li><span class="parameter">cfg</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Stash for CRUD module configuration.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">stats_internal</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Stash for main stats module.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">stats_local_registry</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Stash for local metrics registry.
+</p>
+        </span>
+        </li>
+        <li><span class="parameter">stats_metrics_registry</span>
+            <span class="parameter-info">
+                (<span class="types"><span class="type">string</span></span>)
+            </span>
+        <br>
+        <span class="parameter-description">
+        <p>
+  Stash for metrics rocks statistics registry.
+</p>
+        </span>
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+</div> <!-- id="container" -->
+</body>
+</html>

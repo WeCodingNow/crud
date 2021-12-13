@@ -1,4 +1,5 @@
 local errors = require('errors')
+local fun = require('fun')
 
 local dev_checks = require('crud.common.dev_checks')
 local select_comparators = require('crud.compare.comparators')
@@ -68,12 +69,11 @@ function executor.execute(space, index, filter_func, opts)
 
     opts = opts or {}
 
-    if opts.limit == 0 then
-        return {}
-    end
+    local resp = { tuples_lookup = 0, tuples = {} }
 
-    local tuples = {}
-    local tuples_count = 0
+    if opts.limit == 0 then
+        return resp
+    end
 
     local value = opts.scan_value
     if opts.after_tuple ~= nil then
@@ -84,17 +84,26 @@ function executor.execute(space, index, filter_func, opts)
     end
 
     local tuple
-    local gen = index:pairs(value, {iterator = opts.tarantool_iter})
+    local raw_gen = index:pairs(value, {iterator = opts.tarantool_iter})
+    local gen = fun.wrap(function(param, state)
+        local next_state, var = raw_gen(param, state)
+
+        if var ~= nil then
+            resp.tuples_lookup = resp.tuples_lookup + 1
+        end
+
+        return next_state, var
+    end, raw_gen.param, raw_gen.state)
 
     if opts.after_tuple ~= nil then
         local err
-        tuple, err = scroll_to_after_tuple(gen, space, index, opts.tarantool_iter, opts.after_tuple)
+        tuple, err = scroll_to_after_tuple(gen, space, index, opts.tarantool_iter, opts.after_tuple, resp.stats)
         if err ~= nil then
             return nil, ExecuteSelectError:new("Failed to scroll to the after_tuple: %s", err)
         end
 
         if tuple == nil then
-            return {}
+            return resp
         end
     end
 
@@ -110,10 +119,9 @@ function executor.execute(space, index, filter_func, opts)
         local matched, early_exit = filter_func(tuple)
 
         if matched then
-            table.insert(tuples, tuple)
-            tuples_count = tuples_count + 1
+            table.insert(resp.tuples, tuple)
 
-            if opts.limit ~= nil and tuples_count >= opts.limit then
+            if opts.limit ~= nil and #resp.tuples >= opts.limit then
                 break
             end
         elseif early_exit then
@@ -123,7 +131,7 @@ function executor.execute(space, index, filter_func, opts)
         gen.state, tuple = gen(gen.param, gen.state)
     end
 
-    return tuples
+    return resp
 end
 
 return executor
