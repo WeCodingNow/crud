@@ -13,13 +13,19 @@ jobs:
       matrix:
         # We need 1.10.6 here to check that module works with
         # old Tarantool versions that don't have "tuple-keydef"/"tuple-merger" support.
-        tarantool-version: ["1.10.6", "1.10", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"]
+        tarantool-version: ["1.10.6", "1.10", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7", "2.8"]
+        metrics-version: [""]
         remove-merger: [false]
         include:
           - tarantool-version: "2.7"
             remove-merger: true
           - tarantool-version: "2.8"
+            metrics-version: "0.1.8"
+          - tarantool-version: "2.8"
+            metrics-version: "0.9.0"
+          - tarantool-version: "2.8"
             coveralls: true
+            metrics-version: "0.12.0"
       fail-fast: false
     runs-on: [ubuntu-latest]
     steps:
@@ -46,6 +52,10 @@ jobs:
         run: |
           tarantool --version
           ./deps.sh
+
+      - name: Install metrics
+        if: matrix.metrics-version != ''
+        run: tarantoolctl rocks install metrics ${{ matrix.metrics-version }}
 
       - name: Remove external merger if needed
         if: ${{ matrix.remove-merger }}

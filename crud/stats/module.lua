@@ -6,12 +6,35 @@ local vshard = require('vshard')
 local dev_checks = require('crud.common.dev_checks')
 local utils = require('crud.common.utils')
 local op_module = require('crud.stats.operation')
-local registry = require('crud.stats.local_registry')
 
 local StatsError = errors.new_class('StatsError', {capture_stack = false})
 
 local stats = {}
-local is_enabled = false
+local internal = {
+    registry = nil,
+    driver = nil,
+}
+stats.internal = internal
+
+local local_registry = require('crud.stats.local_registry')
+local metrics_registry = require('crud.stats.metrics_registry')
+
+local drivers = {
+    ['local'] = local_registry,
+}
+if metrics_registry.is_supported() then
+    drivers['metrics'] = metrics_registry
+end
+
+--- Check if statistics module if enabled
+--
+-- @function is_enabled
+--
+-- @treturn[1] boolean Returns true or false.
+--
+function stats.is_enabled()
+    return internal.registry ~= nil
+end
 
 --- Initializes statistics registry, enables callbacks and wrappers
 --
@@ -19,20 +42,52 @@ local is_enabled = false
 --
 -- @function enable
 --
+-- @tparam table opts
+--
+--  @tfield string driver
+--   'local' or 'metrics'.
+--   If 'local', stores statistics in local registry (some Lua tables)
+--   and computes latency as overall average. 'metrics' requires
+--   `metrics >= 0.9.0` installed and stores statistics in
+--   global metrics registry (integrated with exporters)
+--   and computes latency as 0.99 quantile with aging.
+--   If 'metrics' driver is available, it is used by default,
+--   otherwise 'local' is used.
+--
 -- @treturn boolean Returns true.
 --
-function stats.enable()
-    if is_enabled then
-        return true
-    end
+function stats.enable(opts)
+    checks({ driver = '?string' })
 
     StatsError:assert(
         rawget(_G, 'crud') ~= nil,
         "Can be enabled only on crud router"
     )
 
-    registry.init()
-    is_enabled = true
+    opts = opts or {}
+    if opts.driver == nil then
+        if drivers.metrics ~= nil then
+            opts.driver = 'metrics'
+        else
+            opts.driver = 'local'
+        end
+    end
+
+    StatsError:assert(
+        drivers[opts.driver] ~= nil,
+        'Unsupported driver: %s', opts.driver
+    )
+
+    if internal.driver == opts.driver then
+        return true
+    end
+
+    -- Disable old driver registry, if another one was requested.
+    stats.disable()
+
+    internal.driver = opts.driver
+    internal.registry = drivers[opts.driver]
+    internal.registry.init()
 
     return true
 end
@@ -47,12 +102,12 @@ end
 -- @treturn boolean Returns true.
 --
 function stats.reset()
-    if not is_enabled then
+    if not stats.is_enabled() then
         return true
     end
 
-    registry.destroy()
-    registry.init()
+    internal.registry.destroy()
+    internal.registry.init()
 
     return true
 end
@@ -66,12 +121,13 @@ end
 -- @treturn boolean Returns true.
 --
 function stats.disable()
-    if not is_enabled then
+    if not stats.is_enabled() then
         return true
     end
 
-    registry.destroy()
-    is_enabled = false
+    internal.registry.destroy()
+    internal.registry = nil
+    internal.driver = nil
 
     return true
 end
@@ -95,7 +151,11 @@ end
 function stats.get(space_name)
     checks('?string')
 
-    return registry.get(space_name)
+    if not stats.is_enabled() then
+        return {}
+    end
+
+    return internal.registry.get(space_name)
 end
 
 local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
@@ -127,11 +187,11 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
     -- at worst it would be a single excessive check for an instance lifetime.
     -- If we can't verify space existence because of network errors,
     -- it is treated as unknown as well.
-    if status == 'error' and registry.is_unknown_space(space_name) then
+    if status == 'error' and internal.registry.is_unknown_space(space_name) then
         if type(err) == 'table' and type(err.err) == 'string' then
             space_not_found_msg = utils.space_doesnt_exist_msg(space_name)
             if string.find(err.err, space_not_found_msg) ~= nil then
-                registry.observe_space_not_found()
+                internal.registry.observe_space_not_found()
                 goto return_values
             end
         end
@@ -141,7 +201,7 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
         -- Check explicitly if space do not exist.
         space = utils.get_space(space_name, vshard.router.routeall())
         if space == nil then
-            registry.observe_space_not_found()
+            internal.registry.observe_space_not_found()
             goto return_values
         end
     end
@@ -155,11 +215,12 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
         space_name = space.name
     end
 
-    registry.observe(latency, space_name, op, status)
+    internal.registry.observe(latency, space_name, op, status)
 
     if context_stats ~= nil then
         if context_stats.map_reduces ~= nil then
-            registry.observe_map_reduces(context_stats.map_reduces, space_name)
+            internal.registry.observe_map_reduces(
+                context_stats.map_reduces, space_name)
         end
         utils.drop_context_section('router_stats')
     end
@@ -204,7 +265,7 @@ function stats.wrap(func, op, opts)
     dev_checks('function', 'string', { pairs = '?boolean' })
 
     return function(...)
-        if not is_enabled then
+        if not stats.is_enabled() then
             return func(...)
         end
 
@@ -244,11 +305,11 @@ local storage_stats_schema = { tuples_fetched = 'number', tuples_lookup = 'numbe
 local function update_fetch_stats(storage_stats, space_name)
     dev_checks(storage_stats_schema, 'string')
 
-    if not is_enabled then
+    if not stats.is_enabled() then
         return true
     end
 
-    registry.observe_fetch(
+    internal.registry.observe_fetch(
         storage_stats.tuples_fetched,
         storage_stats.tuples_lookup,
         space_name
@@ -265,7 +326,7 @@ end
 -- @treturn[2] function Dummy function, if stats disabled.
 --
 function stats.get_fetch_callback()
-    if not is_enabled then
+    if not stats.is_enabled() then
         return utils.pass
     end
 

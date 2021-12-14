@@ -606,8 +606,19 @@ crud.disable_stats()
 crud.reset_stats()
 ```
 
-Format is as follows.
+If [`metrics`](https://github.com/tarantool/metrics) `0.9.0` or greater
+found, metrics collectors will be used by default to store statistics
+instead of local collectors. You can manually choose driver if needed.
 ```lua
+-- Use metrics collectors.
+crud.enable_stats({ driver = 'metrics' })
+
+-- Use simple local collectors.
+crud.enable_stats({ driver = 'local' })
+```
+
+Format is as follows.
+```
 crud.stats()
 ---
 - spaces:
@@ -654,11 +665,43 @@ Possible statistics operation labels are
 Each operation section contains of different collectors
 for success calls and error (both error throw and `nil, err`)
 returns. `count` is total requests count since instance start
-or stats restart. `latency` is average time of requests execution,
+or stats restart. `latency` is 0.99 quantile of request execution
+time if `metrics` driver used, otherwise `latency` is total average.
 `time` is total time of requests execution.
 
+In `metrics` registry statistics are stored as `tnt_crud_stats` metrics
+with `operation`, `status` and `name` labels. Collector
+`tnt_crud_space_not_found` stores count of calls to unknown spaces.
+```
+metrics:collect()
+---
+- - label_pairs:
+      status: ok
+      operation: insert
+      name: customers
+    value: 221411
+    metric_name: tnt_crud_stats_count
+  - label_pairs:
+      status: ok
+      operation: insert
+      name: customers
+    value: 10.49834896344692
+    metric_name: tnt_crud_stats_sum
+  - label_pairs:
+      status: ok
+      operation: insert
+      name: customers
+      quantile: 0.99
+    value: 0.00023606420935973
+    metric_name: tnt_crud_stats
+  - label_pairs: []
+    value: 3
+    metric_name: tnt_crud_space_not_found
+...
+```
+
 `select` section additionally contains `details` collectors.
-```lua
+```
 crud.stats('my_space').select.details
 ---
 - map_reduces: 4
@@ -670,7 +713,10 @@ crud.stats('my_space').select.details
 (including those not executed successfully). `tuples_fetched`
 is a count of tuples fetched from storages during execution,
 `tuples_lookup` is a count of tuples looked up on storages
-while collecting response for call.
+while collecting response for call. In `metrics` registry they
+are stored as `tnt_crud_map_reduces`, `tnt_crud_tuples_fetched`
+and `tnt_crud_tuples_lookup` metrics with
+`{ operation = 'select', name = space_name }` labels.
 
 ## Cartridge roles
 

@@ -6,14 +6,18 @@ local t = require('luatest')
 local stats_module = require('crud.stats.module')
 local utils = require('crud.common.utils')
 
-local g = t.group('stats_unit')
+local pgroup = t.group('stats_unit', {
+    { driver = 'local' },
+    { driver = 'metrics' },
+})
+local group_driver = t.group('stats_driver_unit')
 local helpers = require('test.helper')
 
 local space_id = 542
 local space_name = 'customers'
 local unknown_space_name = 'non_existing_space'
 
-g.before_all(function(g)
+local function before_all(g)
     -- Enable test cluster for "is space exist?" checks.
     g.cluster = helpers.Cluster:new({
         datadir = fio.tempdir(),
@@ -29,47 +33,64 @@ g.before_all(function(g)
 
     t.assert_equals(helpers.is_space_exist(g.router, space_name), true)
     t.assert_equals(helpers.is_space_exist(g.router, unknown_space_name), false)
-end)
 
-g.after_all(function(g)
+    g.is_metrics_supported = g.router:eval([[
+        return require('crud.stats.metrics_registry').is_supported()
+    ]])
+
+    if g.params ~= nil and g.params.driver == 'metrics' then
+        t.skip_if(g.is_metrics_supported == false, 'Metrics registry is unsupported')
+    end
+end
+
+local function after_all(g)
     helpers.stop_cluster(g.cluster)
-end)
+end
+
+local function get_stats(g, space_name)
+    return g.router:eval("return stats_module.get(...)", { space_name })
+end
+
+local function enable_stats(g, params)
+    params = params or g.params
+    g.router:eval("stats_module.enable(...)", { params })
+end
+
+local function disable_stats(g)
+    g.router:eval("stats_module.disable()")
+end
+
+local function reset_stats(g)
+    g.router:eval("return stats_module.reset()")
+end
+
+pgroup.before_all(before_all)
+
+pgroup.after_all(after_all)
 
 -- Reset statistics between tests, reenable if needed.
-g.before_each(function(g)
-    g:enable_stats()
-end)
+pgroup.before_each(enable_stats)
 
-g.after_each(function(g)
-    g:disable_stats()
-end)
+pgroup.after_each(disable_stats)
 
-function g:get_stats(space_name)
-    return self.router:eval("return stats_module.get(...)", { space_name })
-end
 
-function g:enable_stats()
-    self.router:eval("stats_module.enable()")
-end
+group_driver.before_all(before_all)
 
-function g:disable_stats()
-    self.router:eval("stats_module.disable()")
-end
+group_driver.after_all(after_all)
 
-function g:reset_stats()
-    self.router:eval("return stats_module.reset()")
-end
+group_driver.after_each(disable_stats)
 
-g.test_get_format_after_enable = function(g)
-    local stats = g:get_stats()
+
+pgroup.test_get_format_after_enable = function(g)
+    local stats = get_stats(g)
 
     t.assert_type(stats, 'table')
     t.assert_equals(stats.spaces, {})
     t.assert_equals(stats.space_not_found, 0)
 end
 
-g.test_get_by_space_name_format_after_enable = function(g)
-    local stats = g:get_stats(space_name)
+pgroup.test_get_by_space_name_format_after_enable = function(g)
+    local stats = get_stats(g, space_name)
 
     t.assert_type(stats, 'table')
     t.assert_equals(stats, {})
@@ -127,7 +148,7 @@ for name, case in pairs(observe_cases) do
     for _, op in pairs(case.operations) do
         local test_name = ('test_%s_%s'):format(op, name)
 
-        g[test_name] = function(g)
+        pgroup[test_name] = function(g)
             -- Call wrapped functions on server side.
             -- Collect execution times from outside.
             local run_count = 10
@@ -153,10 +174,10 @@ for name, case in pairs(observe_cases) do
             local total_time = fun.foldl(function(acc, x) return acc + x end, 0, time_diffs)
 
             -- Validate stats format after execution.
-            local total_stats = g:get_stats()
+            local total_stats = get_stats(g)
             t.assert_type(total_stats, 'table', 'Total stats present after observations')
 
-            local space_stats = g:get_stats(space_name)
+            local space_stats = get_stats(g, space_name)
             t.assert_type(space_stats, 'table', 'Space stats present after observations')
 
             t.assert_equals(total_stats.spaces[space_name], space_stats,
@@ -252,7 +273,7 @@ for name_head, disable_case in pairs(disable_stats_cases) do
     for name_tail, return_case in pairs(preserve_return_cases) do
         local test_name = ('test_%s%s'):format(name_head, name_tail)
 
-        g[test_name] = function(g)
+        pgroup[test_name] = function(g)
             local op = stats_module.op.INSERT
 
             local eval = ([[
@@ -276,7 +297,7 @@ for name_head, disable_case in pairs(disable_stats_cases) do
 
     local test_name = ('test_%spairs_wrapper_preserves_return_values'):format(name_head)
 
-    g[test_name] = function(g)
+    pgroup[test_name] = function(g)
         local op = stats_module.op.INSERT
 
         local input = { a = 'a', b = 'b' }
@@ -306,7 +327,7 @@ for name_head, disable_case in pairs(disable_stats_cases) do
     for name_tail, throw_case in pairs(preserve_throw_cases) do
         local test_name = ('test_%s%s'):format(name_head, name_tail)
 
-        g[test_name] = function(g)
+        pgroup[test_name] = function(g)
             local op = stats_module.op.INSERT
 
             local eval = ([[
@@ -362,7 +383,7 @@ local error_cases = {
 for name, case in pairs(error_cases) do
     local test_name = ('test_%s_increases_space_not_found_count'):format(name)
 
-    g[test_name] = function(g)
+    pgroup[test_name] = function(g)
         local op = stats_module.op.INSERT
 
         local eval = ([[
@@ -391,7 +412,7 @@ for name, case in pairs(error_cases) do
 
         t.assert_str_contains(err_msg, case.msg, "Error preserved")
 
-        local stats = g:get_stats()
+        local stats = get_stats(g)
 
         t.assert_equals(stats.space_not_found, 1)
         t.assert_equals(stats.spaces[unknown_space_name], nil,
@@ -399,13 +420,13 @@ for name, case in pairs(error_cases) do
     end
 end
 
-g.test_stats_is_empty_after_disable = function(g)
-    g:disable_stats()
+pgroup.test_stats_is_empty_after_disable = function(g)
+    disable_stats(g)
 
     local op = stats_module.op.INSERT
     g.router:eval(call_wrapped, { 'return_true', op, {}, space_name })
 
-    local stats = g:get_stats()
+    local stats = get_stats(g)
     t.assert_equals(stats, {})
 end
 
@@ -413,57 +434,57 @@ local function prepare_non_default_stats(g)
     local op = stats_module.op.INSERT
     g.router:eval(call_wrapped, { 'return_true', op, {}, space_name })
 
-    local stats = g:get_stats(space_name)
+    local stats = get_stats(g, space_name)
     t.assert_equals(stats[op].ok.count, 1, 'Non-zero stats prepared')
 
     return stats
 end
 
-g.test_enable_is_idempotent = function(g)
+pgroup.test_enable_with_same_driver_is_idempotent = function(g)
     local stats_before = prepare_non_default_stats(g)
 
-    g:enable_stats()
+    enable_stats(g)
 
-    local stats_after = g:get_stats(space_name)
+    local stats_after = get_stats(g, space_name)
 
     t.assert_equals(stats_after, stats_before, 'Stats have not been reset')
 end
 
-g.test_reset = function(g)
+pgroup.test_reset = function(g)
     prepare_non_default_stats(g)
 
-    g:reset_stats()
+    reset_stats(g)
 
-    local stats = g:get_stats(space_name)
+    local stats = get_stats(g, space_name)
 
     t.assert_equals(stats, {}, 'Stats have been reset')
 end
 
-g.test_reset_for_disabled_stats_does_not_init_module = function(g)
-    g:disable_stats()
+pgroup.test_reset_for_disabled_stats_does_not_init_module = function(g)
+    disable_stats(g)
 
-    local stats_before = g:get_stats()
+    local stats_before = get_stats(g)
     t.assert_equals(stats_before, {}, "Stats is empty")
 
-    g:reset_stats()
+    reset_stats(g)
 
-    local stats_after = g:get_stats()
+    local stats_after = get_stats(g)
     t.assert_equals(stats_after, {}, "Stats is still empty")
 end
 
-g.test_enabling_stats_on_non_router_throws_error = function(g)
+pgroup.test_enabling_stats_on_non_router_throws_error = function(g)
     local storage = g.cluster:server('s1-master').net_box
     t.assert_error(storage.eval, storage, " require('crud.stats.module').enable() ")
 end
 
-g.test_stats_fetch_callback = function(g)
+pgroup.test_stats_fetch_callback = function(g)
     local storage_cursor_stats = { tuples_fetched = 5, tuples_lookup = 25 }
 
     g.router:eval([[ stats_module.get_fetch_callback()(...) ]],
         { storage_cursor_stats, space_name })
 
     local op = stats_module.op.SELECT
-    local stats = g:get_stats(space_name)
+    local stats = get_stats(g, space_name)
 
     t.assert_not_equals(stats[op], nil,
         'Fetch stats update inits SELECT collectors')
@@ -476,8 +497,8 @@ g.test_stats_fetch_callback = function(g)
         'tuples_lookup is inremented by expected value')
 end
 
-g.test_disable_stats_before_fetch_callback_get_do_not_break_call = function(g)
-    g:disable_stats()
+pgroup.test_disable_stats_before_fetch_callback_get_do_not_break_call = function(g)
+    disable_stats(g)
 
     local storage_cursor_stats = { tuples_fetched = 5, tuples_lookup = 25 }
     g.router:eval([[ stats_module.get_fetch_callback()(...) ]],
@@ -486,7 +507,7 @@ g.test_disable_stats_before_fetch_callback_get_do_not_break_call = function(g)
     t.success('No unexpected errors')
 end
 
-g.test_disable_stats_after_fetch_callback_get_do_not_break_call = function(g)
+pgroup.test_disable_stats_after_fetch_callback_get_do_not_break_call = function(g)
     local storage_cursor_stats = { tuples_fetched = 5, tuples_lookup = 25 }
 
     g.router:eval([[
@@ -498,10 +519,72 @@ g.test_disable_stats_after_fetch_callback_get_do_not_break_call = function(g)
     t.success('No unexpected errors')
 end
 
-g.test_resolve_name_from_id = function(g)
+pgroup.test_space_is_known_to_registry_after_details_observe = function(g)
+    local storage_cursor_stats = { tuples_fetched = 5, tuples_lookup = 25 }
+
+    g.router:eval([[ stats_module.get_fetch_callback()(...) ]],
+        { storage_cursor_stats, space_name })
+
+    local is_unknown_space = g.router:eval([[
+        return stats_module.internal.registry.is_unknown_space(...)
+    ]], { space_name })
+
+    t.assert_equals(is_unknown_space, false)
+end
+
+pgroup.test_resolve_name_from_id = function(g)
     local op = stats_module.op.LEN
     g.router:eval(call_wrapped, { 'return_true', stats_module.op.LEN, {}, space_id })
 
-    local stats = g:get_stats(space_name)
+    local stats = get_stats(g, space_name)
     t.assert_not_equals(stats[op], nil, "Statistics is filled by name")
 end
+
+group_driver.test_default_driver = function(g)
+    enable_stats(g)
+
+    local driver = g.router:eval(" return stats_module.internal.driver ")
+
+    if g.is_metrics_supported then
+        t.assert_equals(driver, 'metrics')
+    else
+        t.assert_equals(driver, 'local')
+    end
+end
+
+group_driver.before_test(
+    'test_stats_reenable_with_different_driver_reset_stats',
+    function(g)
+        t.skip_if(g.is_metrics_supported == false, 'Metrics registry is unsupported')
+    end
+)
+
+group_driver.test_stats_reenable_with_different_driver_reset_stats = function(g)
+    enable_stats(g, { driver = 'metrics' })
+
+    prepare_non_default_stats(g)
+
+    enable_stats(g, { driver = 'local' })
+    local stats = get_stats(g)
+    t.assert_equals(stats.spaces, {}, 'Stats have been reset')
+end
+
+group_driver.test_unknown_driver_throws_error = function(g)
+    t.assert_error_msg_contains(
+        'Unsupported driver: unknown',
+        enable_stats, g, { driver = 'unknown' })
+end
+
+group_driver.before_test(
+    'test_stats_enable_with_metrics_throws_error_if_unsupported',
+    function(g)
+        t.skip_if(g.is_metrics_supported == true, 'Metrics registry is supported')
+    end
+)
+
+group_driver.test_stats_enable_with_metrics_throws_error_if_unsupported = function(g)
+    t.assert_error_msg_contains(
+        'Unsupported driver: metrics',
+        enable_stats, g, { driver = 'metrics' })
+end
+
