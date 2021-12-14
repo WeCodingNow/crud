@@ -21,6 +21,7 @@ package.preload['customers-storage'] = function()
                 },
                 if_not_exists = true,
                 engine = engine,
+                id = 542,
             })
             customers_space:create_index('id', {
                 parts = { {field = 'id'} },

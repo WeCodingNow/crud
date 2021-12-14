@@ -118,6 +118,8 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
     end
 
     local context_stats = utils.get_context_section('router_stats')
+    -- Describe local variables to use `goto`.
+    local space_not_found_msg, space
 
     -- If space not exists, do not build a separate collector for it.
     -- Call request for non-existing space will always result in error.
@@ -127,7 +129,7 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
     -- it is treated as unknown as well.
     if status == 'error' and registry.is_unknown_space(space_name) then
         if type(err) == 'table' and type(err.err) == 'string' then
-            local space_not_found_msg = utils.space_doesnt_exist_msg(space_name)
+            space_not_found_msg = utils.space_doesnt_exist_msg(space_name)
             if string.find(err.err, space_not_found_msg) ~= nil then
                 registry.observe_space_not_found()
                 goto return_values
@@ -137,11 +139,20 @@ local function wrap_tail(space_name, op, opts, start_time, call_status, ...)
         -- We can't rely only on parsing error value because space existence
         -- is not always the first check in request validation.
         -- Check explicitly if space do not exist.
-        local space = utils.get_space(space_name, vshard.router.routeall())
+        space = utils.get_space(space_name, vshard.router.routeall())
         if space == nil then
             registry.observe_space_not_found()
             goto return_values
         end
+    end
+
+    -- If space id is provided instead of name, resolve name.
+    if type(space_name) ~= 'string' then
+        if space == nil then
+            space = utils.get_space(space_name, vshard.router.routeall())
+        end
+
+        space_name = space.name
     end
 
     registry.observe(latency, space_name, op, status)

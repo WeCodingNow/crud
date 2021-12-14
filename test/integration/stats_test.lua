@@ -7,6 +7,7 @@ local stats_registry_common = require('crud.stats.registry_common')
 local g = t.group('stats_integration')
 local helpers = require('test.helper')
 
+local space_id = 542
 local space_name = 'customers'
 local unknown_space_name = 'non_existing_space'
 
@@ -559,4 +560,12 @@ for name, case in pairs(select_cases) do
         t.assert_equals(map_reduces_diff, case.map_reduces,
             'Expected count of map reduces planned')
     end
+end
+
+g.test_resolve_name_from_id = function(g)
+    local op = 'len'
+    g.router:call('crud.len', { space_id })
+
+    local stats = g:get_stats(space_name)
+    t.assert_not_equals(stats[op], nil, "Statistics is filled by name")
 end

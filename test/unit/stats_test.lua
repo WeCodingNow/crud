@@ -9,6 +9,7 @@ local utils = require('crud.common.utils')
 local g = t.group('stats_unit')
 local helpers = require('test.helper')
 
+local space_id = 542
 local space_name = 'customers'
 local unknown_space_name = 'non_existing_space'
 
@@ -495,4 +496,12 @@ g.test_disable_stats_after_fetch_callback_get_do_not_break_call = function(g)
     ]], { storage_cursor_stats, space_name })
 
     t.success('No unexpected errors')
+end
+
+g.test_resolve_name_from_id = function(g)
+    local op = stats_module.op.LEN
+    g.router:eval(call_wrapped, { 'return_true', stats_module.op.LEN, {}, space_id })
+
+    local stats = g:get_stats(space_name)
+    t.assert_not_equals(stats[op], nil, "Statistics is filled by name")
 end
