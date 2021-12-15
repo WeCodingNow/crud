@@ -616,6 +616,8 @@ crud.enable_stats({ driver = 'metrics' })
 -- Use simple local collectors.
 crud.enable_stats({ driver = 'local' })
 ```
+Performance overhead is 3-5% in case of `local` driver and
+10-20% in case of `metrics` driver.
 
 Format is as follows.
 ```

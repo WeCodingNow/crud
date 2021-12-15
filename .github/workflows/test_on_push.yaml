@@ -16,7 +16,11 @@ jobs:
         tarantool-version: ["1.10.6", "1.10", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7", "2.8"]
         metrics-version: [""]
         remove-merger: [false]
+        perf-test: [false]
         include:
+          - tarantool-version: "1.10"
+            metrics-version: "0.12.0"
+            perf-test: true
           - tarantool-version: "2.7"
             remove-merger: true
           - tarantool-version: "2.8"
@@ -26,6 +30,7 @@ jobs:
           - tarantool-version: "2.8"
             coveralls: true
             metrics-version: "0.12.0"
+            perf-test: true
       fail-fast: false
     runs-on: [ubuntu-latest]
     steps:
@@ -71,6 +76,10 @@ jobs:
 
       - name: Run tests and code coverage analysis
         run: make -C build coverage
+
+      - name: Run performance tests
+        run: make -C build performance
+        if: ${{ matrix.perf-test }}
 
       - name: Send code coverage to coveralls.io
         run: make -C build coveralls

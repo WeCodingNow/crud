@@ -28,6 +28,7 @@ local metric_name = {
 
 local LATENCY_QUANTILE = 0.99
 
+-- Increasing tolerance threshold affects performance.
 local DEFAULT_QUANTILES = {
     [LATENCY_QUANTILE] = 1e-3,
 }
