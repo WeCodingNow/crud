@@ -107,10 +107,16 @@ local row_name = {
 
 local column_name = {
     vshard = 'vshard',
-    without_stats_wrapper = 'crud (without stats wrapper)',
+    without_stats_wrapper = 'crud (raw [1])',
     stats_disabled = 'crud (stats disabled)',
+    bucket_id = 'crud (bucket_id [2])',
     local_stats = 'crud (local stats)',
     metrics_stats = 'crud (metrics stats)',
+}
+
+local column_comment = {
+    '1. Without stats wrapper',
+    '2. Known bucket_id, stats disabled',
 }
 
 local function visualize_section(total_report, name, section, params)
@@ -129,9 +135,8 @@ local function visualize_section(total_report, name, section, params)
         local row_str = normalize(row, params.row_header_width) .. ' ||'
 
         for _, column in ipairs(params.columns) do
-            local report = total_report[row][column]
-
-            if report ~= nil then
+            if total_report[row] ~= nil and total_report[row][column] ~= nil then
+                local report = total_report[row][column]
                 row_str = row_str .. ' ' .. normalize(report.str[section], params.col_width[column]) .. ' |'
             else
                 row_str = row_str .. ' ' .. normalize('unknown', params.col_width[column]) .. ' |'
@@ -155,6 +160,7 @@ local function visualize_report(report)
         column_name.vshard,
         column_name.without_stats_wrapper,
         column_name.stats_disabled,
+        column_name.bucket_id,
         column_name.local_stats,
         column_name.metrics_stats,
     }
@@ -185,6 +191,12 @@ local function visualize_report(report)
     report_str = report_str .. visualize_section(report, 'ERRORS', 'error_count', params)
     report_str = report_str .. visualize_section(report, 'AVERAGE CALL TIME', 'average_time', params)
     report_str = report_str .. visualize_section(report, 'MAX CALL TIME', 'max_time', params)
+
+    for _, comment in ipairs(column_comment) do
+        report_str = report_str .. comment .. '\n'
+    end
+
+    report_str = report_str .. '\n\n'
 
     log.info(report_str)
 end
@@ -420,6 +432,11 @@ local select_params_pk_eq = function()
     return { 'customers', {{'==', 'id', gen() % 10000}} }
 end
 
+local select_params_pk_eq_bucket_id = function()
+    local id = gen() % 10000
+    return { 'customers', {{'==', 'id', id}}, id }
+end
+
 local vshard_select_params_pk_eq = function()
     return { 'customers', gen() % 10000 }
 end
@@ -443,8 +460,18 @@ end
 local select_params_sharded_by_secondary = function()
     return {
         'customers_name_age_key_different_indexes',
-        { { '==', 'name', 'David Smith' }, { '==', 'age', gen() % 50 + 18 }, },
+        { { '==', 'name', 'David Smith' }, { '==', 'age', gen() % 50 + 18 } },
         { first = 1 }
+    }
+end
+
+local select_params_sharded_by_secondary_bucket_id = function()
+    local age = gen() % 50 + 18
+    return {
+        'customers_name_age_key_different_indexes',
+        { { '==', 'name', 'David Smith' }, { '==', 'age', age } },
+        { first = 1 },
+        age
     }
 end
 
@@ -532,6 +559,29 @@ local cases = {
         call = 'crud.select',
         params = select_params_pk_eq,
         matrix = stats_cases,
+        integration_params = integration_params,
+        perf_params = select_perf,
+        row_name = row_name.select_pk,
+    },
+
+    crud_select_known_bucket_id_pk_eq = {
+        prepare = function(g)
+            select_prepare(g)
+
+            g.router:eval([[
+                local vshard = require('vshard')
+
+                local function _crud_select_bucket(space_name, conditions, sharding_key)
+                    local bucket_id = vshard.router.bucket_id_strcrc32(sharding_key)
+                    return crud.select(space_name, conditions, { bucket_id = bucket_id })
+                end
+
+                rawset(_G, '_crud_select_bucket', _crud_select_bucket)
+            ]])
+        end,
+        call = '_crud_select_bucket',
+        params = select_params_pk_eq_bucket_id,
+        matrix = { [''] = { column_name = column_name.bucket_id } },
         integration_params = integration_params,
         perf_params = select_perf,
         row_name = row_name.select_pk,
@@ -642,6 +692,30 @@ local cases = {
         call = 'crud.select',
         params = select_params_sharded_by_secondary,
         matrix = stats_cases,
+        integration_params = integration_params,
+        perf_params = select_perf,
+        row_name = row_name.select_secondary_sharded,
+    },
+
+    crud_select_sharding_secondary_eq_bucket_id = {
+        prepare = function(g)
+            select_sharded_by_secondary_prepare(g)
+
+            g.router:eval([[
+                local vshard = require('vshard')
+
+                local function _crud_select_bucket_secondary(space_name, conditions, opts, sharding_key)
+                    local bucket_id = vshard.router.bucket_id_strcrc32(sharding_key)
+                    opts.bucket_id = bucket_id
+                    return crud.select(space_name, conditions, opts)
+                end
+
+                rawset(_G, '_crud_select_bucket_secondary', _crud_select_bucket_secondary)
+            ]])
+        end,
+        call = '_crud_select_bucket_secondary',
+        params = select_params_sharded_by_secondary_bucket_id,
+        matrix = { [''] = { column_name = column_name.bucket_id } },
         integration_params = integration_params,
         perf_params = select_perf,
         row_name = row_name.select_secondary_sharded,
