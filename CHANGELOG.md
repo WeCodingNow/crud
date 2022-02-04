@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-* Batch insert operation `crud.batch_insert()`/`crud.batch_insert_object()`
+* Batch insert/upsert operation
+  `crud.batch_insert()`/`crud.batch_insert_object()`/
+  `crud.batch_upsert()`/`crud.batch_upsert_object()`
   with partial consistency
-  
+
 ### Changed
 
 ### Fixed

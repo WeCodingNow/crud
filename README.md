@@ -429,6 +429,86 @@ crud.upsert_object('customers',
 ...
 ```
 
+### Batch upsert
+
+Right now CRUD cannot provide batch upsert with full consistency.
+CRUD offers batch upsert with partial consistency. That means
+that full consistency can be provided only on single replicaset
+using `box` transactions.
+
+```lua
+-- Batch upsert tuples
+local result, err = crud.batch_upsert(space_name, tuples, operations, opts)
+-- Batch upsert objects
+local result, err = crud.batch_upsert_object(space_name, objects, operations, opts)
+```
+
+where:
+
+* `space_name` (`string`) - name of the space to insert an object
+* `tuples` / `objects` (`table`) - array of tuples/objects to insert
+* `operations` (`table`) - update [operations](https://www.tarantool.io/en/doc/latest/reference/reference_lua/box_space/#box-space-update) if there is an existing tuple which matches the key fields of tuple  
+* `opts`:
+  * `timeout` (`?number`) - `vshard.call` timeout (in seconds)
+  * `fields` (`?table`) - field names for getting only a subset of fields
+
+Returns metadata and array of empty arrays, array of errors (
+one error corresponds to one replicaset for which the error occurred).
+Error object can contain `tuple` field. This field contains the tuple
+for which the error occurred.
+
+**Example:**
+
+```lua
+crud.batch_upsert('customers', {
+  {1, box.NULL, 'Elizabeth', 23},
+  {2, box.NULL, 'Anastasia', 22},
+}, {{'+', 'age', 1}})
+---
+- metadata:
+  - {'name': 'id', 'type': 'unsigned'}
+  - {'name': 'bucket_id', 'type': 'unsigned'}
+  - {'name': 'name', 'type': 'string'}
+  - {'name': 'age', 'type': 'number'}
+  rows:
+  - []
+  - []
+...
+crud.batch_upsert_object('customers', {
+    {id = 3, name = 'Elizabeth', age = 24},
+    {id = 10, name = 'Anastasia', age = 21},
+}, {{'+', 'age', 1}})
+---
+- metadata:
+  - {'name': 'id', 'type': 'unsigned'}
+  - {'name': 'bucket_id', 'type': 'unsigned'}
+  - {'name': 'name', 'type': 'string'}
+  - {'name': 'age', 'type': 'number'}
+  rows:
+  - []
+  - []
+
+-- Partial success
+local res, errs = crud.batch_insert_object('customers', {
+    {id = 22, name = 'Alex', age = 34},
+    {id = 3, name = 'Anastasia', age = 22},
+    {id = 5, name = 'Sergey', age = 25},
+}, {{'=', 'age', 'invalid type'}})
+---
+res
+- metadata:
+  - {'name': 'id', 'type': 'unsigned'}
+  - {'name': 'bucket_id', 'type': 'unsigned'}
+  - {'name': 'name', 'type': 'string'}
+  - {'name': 'age', 'type': 'number'}
+  rows:
+  - [],
+  - [],
+
+errs
+- [err = 'Tuple field 4 (age) type does not match one required by operation ...', ..., tuple = [3, 2804, 'Anastasia', 22]]
+...
+```
 
 ### Select
 

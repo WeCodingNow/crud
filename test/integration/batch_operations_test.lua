@@ -60,6 +60,38 @@ pgroup.test_non_existent_space = function(g)
     t.assert_not_equals(errs, nil)
     t.assert_equals(#errs, 1)
     t.assert_str_contains(errs[1].err, 'Space "non_existent_space" doesn\'t exist')
+
+    -- batch_upsert
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'non_existent_space',
+        {
+            {1, box.NULL, 'Alex', 59},
+            {2, box.NULL, 'Anna', 23},
+            {3, box.NULL, 'Daria', 18}
+        },
+        {{'+', 'age', 1}}
+    })
+
+    t.assert_equals(result, nil)
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 1)
+    t.assert_str_contains(errs[1].err, 'Space "non_existent_space" doesn\'t exist')
+
+    -- batch_upsert_object
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'non_existent_space',
+        {
+            {id = 1, name = 'Fedor', age = 59},
+            {id = 2, name = 'Anna', age = 23},
+            {id = 3, name = 'Daria', age = 18}
+        },
+        {{'+', 'age', 1}}
+    })
+
+    t.assert_equals(result, nil)
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 1)
+    t.assert_str_contains(errs[1].err, 'Space "non_existent_space" doesn\'t exist')
 end
 
 pgroup.test_batch_insert_object_get = function(g)
@@ -329,6 +361,448 @@ pgroup.test_batch_insert_get = function(g)
     t.assert_equals(result, nil)
 end
 
+pgroup.test_batch_upsert_object_get = function(g)
+    -- bad format
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 1, name = 'Fedor', age = 59},
+            {id = 2, name = 'Anna'},
+        }, {
+            {'+', 'age', 25},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_equals(result, nil)
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 1)
+    t.assert_str_contains(errs[1].err, 'Field \"age\" isn\'t nullable')
+    t.assert_equals(errs[1].tuple, {id = 2, name = 'Anna'})
+
+    -- batch_upsert_object
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 1, name = 'Fedor', age = 59},
+            {id = 2, name = 'Anna', age = 23},
+            {id = 3, name = 'Daria', age = 18}
+        }, {
+            {'+', 'age', 25},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+
+    -- get
+    -- primary key = 1 -> bucket_id = 477 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(1)
+    t.assert_equals(result, {1, 477, 'Fedor', 59})
+
+    -- primary key = 2 -> bucket_id = 401 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(2)
+    t.assert_equals(result, {2, 401, 'Anna', 23})
+
+    -- primary key = 3 -> bucket_id = 2804 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(3)
+    t.assert_equals(result, {3, 2804, 'Daria', 18})
+
+    -- batch_insert_object again
+    -- success with updating one record
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 1, name = 'Alex', age = 34},
+            {id = 81, name = 'Anastasia', age = 22},
+            {id = 92, name = 'Sergey', age = 25},
+        }, {
+            {'+', 'age', 10},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+
+    -- get
+    -- primary key = 1 -> bucket_id = 477 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(1)
+    t.assert_equals(result, {1, 477, 'Leo Tolstoy', 69})
+
+    -- primary key = 81 -> bucket_id = 2205 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(81)
+    t.assert_equals(result, {81, 2205, 'Anastasia', 22})
+
+    -- primary key = 92 -> bucket_id = 2040 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(92)
+    t.assert_equals(result, {92, 2040, 'Sergey', 25})
+
+    -- batch_insert_object again
+    -- success with updating all records
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 1, name = 'Alex', age = 34},
+            {id = 81, name = 'Anastasia', age = 22},
+            {id = 92, name = 'Sergey', age = 25},
+        }, {
+            {'+', 'age', 1},
+            {'=', 'name', 'Peter'},
+        }
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+
+    -- get
+    -- primary key = 1 -> bucket_id = 477 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(1)
+    t.assert_equals(result, {1, 477, 'Peter', 70})
+
+    -- primary key = 81 -> bucket_id = 2205 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(81)
+    t.assert_equals(result, {81, 2205, 'Peter', 23})
+
+    -- primary key = 92 -> bucket_id = 2040 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(92)
+    t.assert_equals(result, {92, 2040, 'Peter', 26})
+
+    -- batch_upsert_object again
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 22, name = 'Alex', age = 34},
+            {id = 3, name = 'Anastasia', age = 22},
+            {id = 5, name = 'Sergey', age = 25},
+        }, {
+            {'=', 'age', 'invalid type'},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 1)
+    if helpers.tarantool_version_at_least(2, 8) then
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 (age) type does not match one required by operation')
+    else
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 type does not match one required by operation')
+    end
+    t.assert_equals(errs[1].tuple, {3, 2804, 'Anastasia', 22})
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}})
+
+    -- get
+    -- primary key = 22 -> bucket_id = 655 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(22)
+    t.assert_equals(result, {22, 655, 'Alex', 34})
+
+    -- primary key = 5 -> bucket_id = 1172 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(5)
+    t.assert_equals(result, {5, 1172, 'Sergey', 25})
+
+    -- primary key = 3 -> bucket_id = 2804 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(3)
+    t.assert_equals(result, {3, 2804, 'Daria', 18})
+
+    -- batch_insert_object again
+    -- fails for both: s1-master s2-master
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 2, name = 'Alex', age = 34},
+            {id = 3, name = 'Anastasia', age = 22},
+            {id = 10, name = 'Sergey', age = 25},
+        }, {
+            {'=', 'age', 'invalid type'},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_equals(result, nil)
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 2)
+
+    table.sort(errs, function(err1, err2) return err1.tuple[1] < err2.tuple[1] end)
+
+    if helpers.tarantool_version_at_least(2, 8) then
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 (age) type does not match one required by operation')
+    else
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 type does not match one required by operation')
+    end
+    t.assert_equals(errs[1].tuple, {2, 401, 'Alex', 34})
+
+    if helpers.tarantool_version_at_least(2, 8) then
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 (age) type does not match one required by operation')
+    else
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 type does not match one required by operation')
+    end
+    t.assert_equals(errs[2].tuple, {3, 2804, 'Anastasia', 22})
+
+    -- primary key = 2 -> bucket_id = 401 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(2)
+    t.assert_equals(result, {2, 401, 'Anna', 23})
+
+    -- primary key = 3 -> bucket_id = 2804 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(3)
+    t.assert_equals(result, {3, 2804, 'Daria', 18})
+
+    -- primary key = 10 -> bucket_id = 569 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(10)
+    t.assert_equals(result, nil)
+end
+
+pgroup.test_batch_upsert_get = function(g)
+    -- batch_upsert
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'customers',
+        {
+            {1, box.NULL, 'Fedor', 59},
+            {2, box.NULL, 'Anna', 23},
+            {3, box.NULL, 'Daria', 18}
+        }, {
+            {'+', 'age', 25},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+
+    -- get
+    -- primary key = 1 -> bucket_id = 477 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(1)
+    t.assert_equals(result, {1, 477, 'Fedor', 59})
+
+    -- primary key = 2 -> bucket_id = 401 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(2)
+    t.assert_equals(result, {2, 401, 'Anna', 23})
+
+    -- primary key = 3 -> bucket_id = 2804 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(3)
+    t.assert_equals(result, {3, 2804, 'Daria', 18})
+
+    -- batch_insert again
+    -- success with updating one record
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'customers',
+        {
+            {1, box.NULL, 'Alex', 34},
+            {81, box.NULL, 'Anastasia', 22},
+            {92, box.NULL, 'Sergey', 25},
+        }, {
+            {'+', 'age', 10},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+
+    -- get
+    -- primary key = 1 -> bucket_id = 477 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(1)
+    t.assert_equals(result, {1, 477, 'Leo Tolstoy', 69})
+
+    -- primary key = 81 -> bucket_id = 2205 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(81)
+    t.assert_equals(result, {81, 2205, 'Anastasia', 22})
+
+    -- primary key = 92 -> bucket_id = 2040 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(92)
+    t.assert_equals(result, {92, 2040, 'Sergey', 25})
+
+    -- batch_insert again
+    -- success with updating all records
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'customers',
+        {
+            {1, box.NULL, 'Alex', 34},
+            {81, box.NULL, 'Anastasia', 22},
+            {92, box.NULL, 'Sergey', 25},
+        }, {
+            {'+', 'age', 1},
+            {'=', 'name', 'Peter'},
+        }
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+
+    -- get
+    -- primary key = 1 -> bucket_id = 477 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(1)
+    t.assert_equals(result, {1, 477, 'Peter', 70})
+
+    -- primary key = 81 -> bucket_id = 2205 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(81)
+    t.assert_equals(result, {81, 2205, 'Peter', 23})
+
+    -- primary key = 92 -> bucket_id = 2040 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(92)
+    t.assert_equals(result, {92, 2040, 'Peter', 26})
+
+    -- batch_upsert again
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'customers',
+        {
+            {22, box.NULL, 'Alex', 34},
+            {3, box.NULL, 'Anastasia', 22},
+            {5, box.NULL, 'Sergey', 25},
+        }, {
+            {'=', 'age', 'invalid type'},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 1)
+    if helpers.tarantool_version_at_least(2, 8) then
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 (age) type does not match one required by operation')
+    else
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 type does not match one required by operation')
+    end
+    t.assert_equals(errs[1].tuple, {3, 2804, 'Anastasia', 22})
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'bucket_id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+        {name = 'age', type = 'number'},
+    })
+    t.assert_equals(result.rows, {{}, {}})
+
+    -- get
+    -- primary key = 22 -> bucket_id = 655 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(22)
+    t.assert_equals(result, {22, 655, 'Alex', 34})
+
+    -- primary key = 5 -> bucket_id = 1172 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(5)
+    t.assert_equals(result, {5, 1172, 'Sergey', 25})
+
+    -- primary key = 3 -> bucket_id = 2804 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(3)
+    t.assert_equals(result, {3, 2804, 'Daria', 18})
+
+    -- batch_insert again
+    -- fails for both: s1-master s2-master
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'customers',
+        {
+            {2, box.NULL, 'Alex', 34},
+            {3, box.NULL, 'Anastasia', 22},
+            {10, box.NULL, 'Sergey', 25},
+        }, {
+            {'=', 'age', 'invalid type'},
+            {'=', 'name', 'Leo Tolstoy'},
+        }
+    })
+
+    t.assert_equals(result, nil)
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 2)
+
+    table.sort(errs, function(err1, err2) return err1.tuple[1] < err2.tuple[1] end)
+
+    if helpers.tarantool_version_at_least(2, 8) then
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 (age) type does not match one required by operation')
+    else
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 type does not match one required by operation')
+    end
+    t.assert_equals(errs[1].tuple, {2, 401, 'Alex', 34})
+
+    if helpers.tarantool_version_at_least(2, 8) then
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 (age) type does not match one required by operation')
+    else
+        t.assert_str_contains(errs[1].err, 'Tuple field 4 type does not match one required by operation')
+    end
+    t.assert_equals(errs[2].tuple, {3, 2804, 'Anastasia', 22})
+
+    -- primary key = 2 -> bucket_id = 401 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(2)
+    t.assert_equals(result, {2, 401, 'Anna', 23})
+
+    -- primary key = 3 -> bucket_id = 2804 -> s1-master
+    local conn_s1 = g.cluster:server('s1-master').net_box
+    local result = conn_s1.space['customers']:get(3)
+    t.assert_equals(result, {3, 2804, 'Daria', 18})
+
+    -- primary key = 10 -> bucket_id = 569 -> s2-master
+    local conn_s2 = g.cluster:server('s2-master').net_box
+    local result = conn_s2.space['customers']:get(10)
+    t.assert_equals(result, nil)
+end
+
 pgroup.test_batch_insert_partial_result = function(g)
     -- bad fields format
     local result, errs = g.cluster.main_server.net_box:call('crud.batch_insert', {
@@ -405,6 +879,92 @@ pgroup.test_batch_insert_object_partial_result = function(g)
     t.assert_equals(objects, {{id = 1, name = 'Fedor'}, {id = 2, name = 'Anna'}, {id = 3, name = 'Daria'}})
 end
 
+pgroup.test_batch_upsert_partial_result = function(g)
+    -- bad fields format
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'customers',
+        {
+            {15, box.NULL, 'Fedor', 59},
+            {25, box.NULL, 'Anna', 23},
+        },
+        {
+            {'+', 'age', 1},
+            {'=', 'name', 'Peter'},
+        },
+        {fields = {'id', 'invalid'}},
+    })
+
+    t.assert_equals(result, nil)
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 1)
+    t.assert_str_contains(errs[1].err, 'Space format doesn\'t contain field named "invalid"')
+
+    -- batch_upsert
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert', {
+        'customers',
+        {
+            {1, box.NULL, 'Fedor', 59},
+            {2, box.NULL, 'Anna', 23},
+            {3, box.NULL, 'Daria', 18}
+        },
+        {
+            {'+', 'age', 1},
+            {'=', 'name', 'Peter'},
+        },
+        {fields = {'id', 'name'}},
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+end
+
+pgroup.test_batch_upsert_object_partial_result = function(g)
+    -- bad fields format
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 15, name = 'Fedor', age = 59},
+            {id = 25, name = 'Anna', age = 23},
+        },
+        {
+            {'+', 'age', 1},
+            {'=', 'name', 'Peter'},
+        },
+        {fields = {'id', 'invalid'}},
+    })
+
+    t.assert_equals(result, nil)
+    t.assert_not_equals(errs, nil)
+    t.assert_equals(#errs, 1)
+    t.assert_str_contains(errs[1].err, 'Space format doesn\'t contain field named "invalid"')
+
+    -- batch_upsert_object
+    local result, errs = g.cluster.main_server.net_box:call('crud.batch_upsert_object', {
+        'customers',
+        {
+            {id = 1, name = 'Fedor', age = 59},
+            {id = 2, name = 'Anna', age = 23},
+            {id = 3, name = 'Daria', age = 18}
+        },
+        {
+            {'+', 'age', 1},
+            {'=', 'name', 'Peter'},
+        },
+        {fields = {'id', 'name'}},
+    })
+
+    t.assert_equals(errs, nil)
+    t.assert_equals(result.metadata, {
+        {name = 'id', type = 'unsigned'},
+        {name = 'name', type = 'string'},
+    })
+    t.assert_equals(result.rows, {{}, {}, {}})
+end
+
 pgroup.test_opts_not_damaged = function(g)
     -- batch insert
     local batch_insert_opts = {timeout = 1, fields = {'name', 'age'}}
@@ -439,4 +999,44 @@ pgroup.test_opts_not_damaged = function(g)
 
     t.assert_equals(err, nil)
     t.assert_equals(new_batch_insert_opts, batch_insert_opts)
+
+    -- batch upsert
+    local batch_upsert_opts = {timeout = 1, fields = {'name', 'age'}}
+    local new_batch_upsert_opts, err = g.cluster.main_server:eval([[
+        local crud = require('crud')
+
+        local batch_upsert_opts = ...
+
+        local _, err = crud.batch_upsert('customers', {
+            {1, box.NULL, 'Alex', 59}
+        }, {
+            {'+', 'age', 25},
+            {'=', 'name', 'Leo Tolstoy'},
+        }, batch_upsert_opts)
+
+        return batch_upsert_opts, err
+    ]], {batch_upsert_opts})
+
+    t.assert_equals(err, nil)
+    t.assert_equals(new_batch_upsert_opts, batch_upsert_opts)
+
+    -- batch upsert_object
+    local batch_upsert_opts = {timeout = 1, fields = {'name', 'age'}}
+    local new_batch_upsert_opts, err = g.cluster.main_server:eval([[
+        local crud = require('crud')
+
+        local batch_upsert_opts = ...
+
+        local _, err = crud.batch_upsert_object('customers', {
+            {id = 2, name = 'Fedor', age = 59}
+        }, {
+            {'+', 'age', 25},
+            {'=', 'name', 'Leo Tolstoy'},
+        }, batch_upsert_opts)
+
+        return batch_upsert_opts, err
+    ]], {batch_upsert_opts})
+
+    t.assert_equals(err, nil)
+    t.assert_equals(new_batch_upsert_opts, batch_upsert_opts)
 end
