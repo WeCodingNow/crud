@@ -10,6 +10,7 @@ dependencies = {
     'checks == 3.1.0-1',
     'errors == 2.2.1-1',
     'vshard >= 0.1.18-1',
+    'tracing',
 }
 
 build = {

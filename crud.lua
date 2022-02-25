@@ -135,4 +135,17 @@ function crud.stop_storage()
     rawset(_G, '_crud', nil)
 end
 
+local opentracing = require('opentracing')
+local zipkin = require('zipkin.tracer')
+
+opentracing.set_global_tracer(
+    zipkin.new({
+        base_url = 'localhost:9411/api/v2/spans',
+        api_method = 'POST',
+        report_interval = 0,
+    }, {
+        sample = function () return true end
+    })
+)
+
 return crud
