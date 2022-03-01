@@ -4,7 +4,6 @@ local digest = require('digest')
 local vshard = require('vshard')
 local errors = require('errors')
 local log = require('log')
-local opentracing = require('opentracing')
 
 local ReloadSchemaError = errors.new_class('ReloadSchemaError', {capture_stack = false})
 
@@ -73,23 +72,6 @@ local function reload_schema(replicasets)
     return true
 end
 
-local function reload_schema_traced(trace_ctx, ...)
-    local span
-    local span_name = 'reload_schema'
-    if trace_ctx then
-        span = opentracing.start_span_from_context(opentracing.map_extract(trace_ctx), span_name)
-    else
-        span = opentracing.start_span(span_name)
-    end
-    -- TODO: вынести эту magic константу в отдельный модуль
-    span:set_component('crud-router')
-
-    local ret, err = reload_schema(...)
-    span:finish()
-
-    return ret, err
-end
-
 -- schema.wrap_func_reload calls func with specified arguments.
 -- func should return `res, err, need_reload`
 -- If function returned error and `need_reload` is true,
@@ -123,44 +105,6 @@ function schema.wrap_func_reload(func, ...)
 
     return res, err
 end
-
-function schema.wrap_func_reload_traced(wrap_span, func, ...)
-    local i = 0
-
-    local res, err, need_reload
-    while true do
-        res, err, need_reload = func(...)
-
-        if err == nil or not need_reload then
-            break
-        end
-
-        local ctx = {}
-        opentracing.map_inject(wrap_span:context(), ctx)
-
-        local ok, reload_schema_err = reload_schema_traced(ctx, vshard.router.routeall())
-        if not ok then
-            log.warn("Failed to reload schema: %s", reload_schema_err)
-            break
-        end
-
-        i = i + 1
-        if i > const.RELOAD_RETRIES_NUM then
-            break
-        end
-    end
-
-    wrap_span:finish()
-    return res, err
-end
-
--- function schema.wrap_func_reload_traced(wrap_span, ...)
---     local ret, err = schema.wrap_func_reload(...)
---     require('log').info(err)
-
---     wrap_span:finish()
---     return ret, err
--- end
 
 local function get_space_schema_hash(space)
     if space == nil then

@@ -1,6 +1,5 @@
 local vshard = require('vshard')
 local errors = require('errors')
-local opentracing = require('opentracing')
 
 local dev_checks = require('crud.common.dev_checks')
 local utils = require('crud.common.utils')
@@ -134,8 +133,6 @@ function call.single(bucket_id, func_name, func_args, opts)
         timeout = '?number',
     })
 
-    -- TODO: вынести эту magic константу в отдельный модуль
-
     local vshard_call_name, err = call.get_vshard_call_name(opts.mode, opts.prefer_replica, opts.balance)
     if err ~= nil then
         return nil, err
@@ -156,13 +153,6 @@ function call.single(bucket_id, func_name, func_args, opts)
     end
 
     return res
-end
-
-function call.single_traced(span, ...)
-    local ret = call.single(...)
-    span:finish()
-
-    return ret
 end
 
 function call.any(func_name, func_args, opts)
