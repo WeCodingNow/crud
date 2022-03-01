@@ -1,5 +1,4 @@
 local errors = require('errors')
-local opentracing = require('opentracing')
 
 local utils = require('crud.common.utils')
 local select_executor = require('crud.select.executor')
@@ -39,31 +38,15 @@ local function select_on_storage(space_name, index_id, conditions, opts)
         limit = 'number',
         scan_condition_num = '?number',
         field_names = '?table',
-        trace_ctx = '?table',
     })
-
-    local span
-    local span_name = 'select_on_storage'
-    -- TODO: запихнуть здесь в тег название/uuid репликасета/инстанса
-    -- или всё вместе
-    if opts and opts.trace_ctx then
-        span = opentracing.start_span_from_context(opentracing.map_extract(opts.trace_ctx), span_name)
-    else
-        span = opentracing.start_span(span_name)
-    end
-    -- TODO: вынести эту magic константу в отдельный модуль
-    span:set_component('crud-storage')
-
 
     local space = box.space[space_name]
     if space == nil then
-        span:finish()
         return nil, SelectError:new("Space %q doesn't exist", space_name)
     end
 
     local index = space.index[index_id]
     if index == nil then
-        span:finish()
         return nil, SelectError:new("Index with ID %s doesn't exist", index_id)
     end
 
@@ -72,23 +55,17 @@ local function select_on_storage(space_name, index_id, conditions, opts)
         scan_condition_num = opts.scan_condition_num,
     })
     if err ~= nil then
-        span:finish()
         return nil, SelectError:new("Failed to generate tuples filter: %s", err)
     end
 
     -- execute select
-    local execute_trace_ctx = {}
-    opentracing.map_inject(span:context(), execute_trace_ctx)
-
     local tuples, err = select_executor.execute(space, index, filter_func, {
         scan_value = opts.scan_value,
         after_tuple = opts.after_tuple,
         tarantool_iter = opts.tarantool_iter,
         limit = opts.limit,
-        trace_ctx = execute_trace_ctx,
     })
     if err ~= nil then
-        span:finish()
         return nil, SelectError:new("Failed to execute select: %s", err)
     end
 
@@ -101,10 +78,7 @@ local function select_on_storage(space_name, index_id, conditions, opts)
 
     -- getting tuples with user defined fields (if `fields` option is specified)
     -- and fields that are needed for comparison on router (primary key + scan key)
-    -- return cursor, schema.filter_tuples_fields(tuples, opts.field_names)
-    local filter_tuples_fields_ret = schema.filter_tuples_fields(tuples, opts.field_names)
-    span:finish()
-    return cursor, filter_tuples_fields_ret
+    return cursor, schema.filter_tuples_fields(tuples, opts.field_names)
 end
 
 function select_module.init()

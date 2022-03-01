@@ -1,5 +1,4 @@
 local errors = require('errors')
-local opentracing = require('opentracing')
 
 local dev_checks = require('crud.common.dev_checks')
 local select_comparators = require('crud.compare.comparators')
@@ -65,25 +64,11 @@ function executor.execute(space, index, filter_func, opts)
         after_tuple = '?table',
         tarantool_iter = 'number',
         limit = '?number',
-        trace_ctx = '?table',
     })
 
     opts = opts or {}
 
-    local span
-    local span_name = 'executor.execute'
-    -- TODO: запихнуть здесь в тег название/uuid репликасета/инстанса
-    -- или всё вместе
-    if opts and opts.trace_ctx then
-        span = opentracing.start_span_from_context(opentracing.map_extract(opts.trace_ctx), span_name)
-    else
-        span = opentracing.start_span(span_name)
-    end
-    -- TODO: вынести эту magic константу в отдельный модуль
-    span:set_component('crud-storage')
-
     if opts.limit == 0 then
-        span:finish()
         return {}
     end
 
@@ -105,12 +90,10 @@ function executor.execute(space, index, filter_func, opts)
         local err
         tuple, err = scroll_to_after_tuple(gen, space, index, opts.tarantool_iter, opts.after_tuple)
         if err ~= nil then
-            span:finish()
             return nil, ExecuteSelectError:new("Failed to scroll to the after_tuple: %s", err)
         end
 
         if tuple == nil then
-            span:finish()
             return {}
         end
     end
@@ -140,7 +123,6 @@ function executor.execute(space, index, filter_func, opts)
         gen.state, tuple = gen(gen.param, gen.state)
     end
 
-    span:finish()
     return tuples
 end
 
