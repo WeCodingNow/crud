@@ -11,6 +11,7 @@ local sharding_metadata_module = require('crud.common.sharding.sharding_metadata
 
 local compare_conditions = require('crud.compare.conditions')
 local select_plan = require('crud.compare.plan')
+local tracing = require('crud.tracing')
 
 local Merger = require('crud.select.merger')
 
@@ -294,9 +295,11 @@ local function select_module_call_xc(space_name, user_conditions, opts)
         rows = tuples,
     }
 end
+select_module_call_xc = tracing.decorate(select_module_call_xc, 'select_module_call_xc')
 
 function select_module.call(space_name, user_conditions, opts)
     return SelectError:pcall(select_module_call_xc, space_name, user_conditions, opts)
 end
+select_module.call = tracing.decorate(select_module.call, 'select_module.call')
 
 return select_module
