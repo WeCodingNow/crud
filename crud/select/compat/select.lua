@@ -1,6 +1,7 @@
 local checks = require('checks')
 local errors = require('errors')
 local vshard = require('vshard')
+local opentracing = require('opentracing')
 
 local utils = require('crud.common.utils')
 local sharding = require('crud.common.sharding')
@@ -296,7 +297,22 @@ local function select_module_call_xc(space_name, user_conditions, opts)
 end
 
 function select_module.call(space_name, user_conditions, opts)
-    return SelectError:pcall(select_module_call_xc, space_name, user_conditions, opts)
+    local span
+    local span_name = 'select_module.call'
+    -- TODO: запихнуть здесь в тег название/uuid репликасета/инстанса
+    -- или всё вместе
+    if opts and opts.trace_ctx then
+        span = opentracing.start_span_from_context(opentracing.map_extract(opts.trace_ctx), span_name)
+    else
+        span = opentracing.start_span(span_name)
+    end
+    -- TODO: вынести эту magic константу в отдельный модуль
+    span:set_component('crud-router')
+
+    local ret, err = SelectError:pcall(select_module_call_xc, space_name, user_conditions, opts)
+
+    return ret, err
+    -- return SelectError:pcall(select_module_call_xc, space_name, user_conditions, opts)
 end
 
 return select_module
