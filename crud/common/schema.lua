@@ -4,6 +4,7 @@ local digest = require('digest')
 local vshard = require('vshard')
 local errors = require('errors')
 local log = require('log')
+local tracing = require('tracing_decorator')
 
 local ReloadSchemaError = errors.new_class('ReloadSchemaError', {capture_stack = false})
 
@@ -105,6 +106,7 @@ function schema.wrap_func_reload(func, ...)
 
     return res, err
 end
+schema.wrap_func_reload = tracing.decorate(schema.wrap_func_reload, 'schema.wrap_func_reload')
 
 local function get_space_schema_hash(space)
     if space == nil then

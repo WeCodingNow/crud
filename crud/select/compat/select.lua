@@ -11,11 +11,13 @@ local sharding_metadata_module = require('crud.common.sharding.sharding_metadata
 
 local compare_conditions = require('crud.compare.conditions')
 local select_plan = require('crud.compare.plan')
-local tracing = require('crud.tracing')
+local tracing = require('tracing_decorator')
 
 local Merger = require('crud.select.merger')
 
 local SelectError = errors.new_class('SelectError')
+
+local TRACING_MODULE = 'crud.select.compat.select'
 
 local select_module = {}
 
@@ -163,6 +165,15 @@ local function build_select_iterator(space_name, user_conditions, opts)
         space_format = filtered_space_format,
     }
 end
+build_select_iterator = tracing.decorate(
+    build_select_iterator, 'build_select_iterator',
+    {
+        component = 'crud-router',
+        tags = {
+            ['module'] = TRACING_MODULE,
+        }
+    }
+)
 
 function select_module.pairs(space_name, user_conditions, opts)
     checks('string', '?table', {
@@ -227,6 +238,15 @@ function select_module.pairs(space_name, user_conditions, opts)
 
     return gen, param, state
 end
+select_module.pairs = tracing.decorate(
+    select_module.pairs, 'select_module.pairs',
+    {
+        component = 'crud-router',
+        tags = {
+            ['module'] = TRACING_MODULE,
+        }
+    }
+)
 
 local function select_module_call_xc(space_name, user_conditions, opts)
     checks('string', '?table', {
@@ -277,14 +297,37 @@ local function select_module_call_xc(space_name, user_conditions, opts)
 
     local count = 0
     local first = opts.first and math.abs(opts.first)
-    for _, tuple in iter.merger:pairs() do
-        if first ~= nil and count >= first then
-            break
-        end
 
-        table.insert(tuples, tuple)
-        count = count + 1
-    end
+    -- local loop_span = tracing.start_span('grabbing tuples')
+    -- loop_span:set_component('crud-router')
+
+    -- local carrier = {}
+    -- require('opentracing').map_inject(loop_span:context(), carrier)
+    -- tracing.trace_stack_push(carrier)
+
+    -- for tag_name, tag_value in pairs{
+    --     ['module'] = TRACING_MODULE,
+    -- } do
+    --     -- loop_span:set_tag(tag_name, tag_value)
+    -- end
+
+    tracing.decorate(function ()
+        for _, tuple in iter.merger:pairs() do
+            if first ~= nil and count >= first then
+                break
+            end
+
+            table.insert(tuples, tuple)
+            count = count + 1
+        end
+    end, 'grabbing_tuples', {
+        component = 'crud-router',
+        tags = {
+            ['module'] = TRACING_MODULE,
+        }
+    })()
+
+    -- loop_span:finish()
 
     if opts.first ~= nil and opts.first < 0 then
         utils.reverse_inplace(tuples)
@@ -295,11 +338,27 @@ local function select_module_call_xc(space_name, user_conditions, opts)
         rows = tuples,
     }
 end
-select_module_call_xc = tracing.decorate(select_module_call_xc, 'select_module_call_xc')
+select_module_call_xc = tracing.decorate(
+    select_module_call_xc, 'select_module_call_xc',
+    {
+        component = 'crud-router',
+        tags = {
+            ['module'] = TRACING_MODULE,
+        }
+    }
+)
 
 function select_module.call(space_name, user_conditions, opts)
     return SelectError:pcall(select_module_call_xc, space_name, user_conditions, opts)
 end
-select_module.call = tracing.decorate(select_module.call, 'select_module.call')
+select_module.call = tracing.decorate(
+    select_module.call, 'select_module.call',
+    {
+        component = 'crud-router',
+        tags = {
+            ['module'] = TRACING_MODULE,
+        }
+    }
+)
 
 return select_module

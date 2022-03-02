@@ -2,11 +2,14 @@ local buffer = require('buffer')
 local msgpack = require('msgpack')
 local ffi = require('ffi')
 local call = require('crud.common.call')
+local tracing = require('tracing_decorator')
 
 local compat = require('crud.common.compat')
 local merger_lib = compat.require('tuple.merger', 'merger')
 
 local Keydef = require('crud.compare.keydef')
+
+local TRACING_MODULE = 'crud.select.compat.merger'
 
 local function bswap_u16(num)
     return bit.rshift(bit.bswap(tonumber(num)), 16)
@@ -126,6 +129,14 @@ local function fetch_chunk(context, state)
     local next_state = {future = next_future}
     return next_state, buf
 end
+fetch_chunk = tracing.decorate(
+    fetch_chunk, 'fetch_chunk',
+    {
+        tags = {
+            ['module'] = TRACING_MODULE,
+        }
+    }
+)
 
 local reverse_tarantool_iters = {
     [box.index.LE] = true,
@@ -182,6 +193,7 @@ local function new(replicasets, space, index_id, func_name, func_args, opts)
 
     return merger
 end
+new = tracing.decorate(new, 'merger.new')
 
 return {
     new = new,

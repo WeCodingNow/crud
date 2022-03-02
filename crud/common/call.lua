@@ -4,6 +4,7 @@ local errors = require('errors')
 local dev_checks = require('crud.common.dev_checks')
 local utils = require('crud.common.utils')
 local fiber_clock = require('fiber').clock
+local tracing = require('tracing_decorator')
 
 local CallError = errors.new_class('CallError')
 local NotInitializedError = errors.new_class('NotInitialized')
@@ -38,6 +39,8 @@ function call.get_vshard_call_name(mode, prefer_replica, balance)
     -- prefer_replica and balance
     return 'callbre'
 end
+call.get_vshard_call_name = tracing.decorate(call.get_vshard_call_name , 'call.get_vshard_call_name')
+
 
 local function wrap_vshard_err(err, func_name, replicaset_uuid, bucket_id)
     if err.type == 'ClientError' and type(err.message) == 'string' then
@@ -124,6 +127,7 @@ function call.map(func_name, func_args, opts)
 
     return results
 end
+call.map = tracing.decorate(call.map, 'call.map')
 
 function call.single(bucket_id, func_name, func_args, opts)
     dev_checks('number', 'string', '?table', {
@@ -154,6 +158,7 @@ function call.single(bucket_id, func_name, func_args, opts)
 
     return res
 end
+call.single = tracing.decorate(call.single, 'call.single')
 
 function call.any(func_name, func_args, opts)
     dev_checks('string', '?table', {
@@ -181,5 +186,6 @@ function call.any(func_name, func_args, opts)
 
     return res
 end
+call.any = tracing.decorate(call.any, 'call.any')
 
 return call

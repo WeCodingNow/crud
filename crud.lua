@@ -15,7 +15,7 @@ local count = require('crud.count')
 local borders = require('crud.borders')
 local sharding_metadata = require('crud.common.sharding.sharding_metadata')
 local utils = require('crud.common.utils')
-local tracing = require('crud.tracing')
+local tracing = require('tracing_decorator')
 
 local crud = {}
 

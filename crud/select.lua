@@ -5,9 +5,11 @@ local select_executor = require('crud.select.executor')
 local select_filters = require('crud.compare.filters')
 local dev_checks = require('crud.common.dev_checks')
 local schema = require('crud.common.schema')
-local tracing = require('crud.tracing')
+local tracing = require('tracing_decorator')
 
 local SelectError = errors.new_class('SelectError')
+
+local TRACING_MODULE = 'crud.select'
 
 local select_module
 
@@ -81,8 +83,15 @@ local function select_on_storage(space_name, index_id, conditions, opts)
     -- and fields that are needed for comparison on router (primary key + scan key)
     return cursor, schema.filter_tuples_fields(tuples, opts.field_names)
 end
-
-select_on_storage = tracing.decorate(select_on_storage, 'select_on_storage')
+select_on_storage = tracing.decorate(
+    select_on_storage, 'select_on_storage',
+    {
+        component = 'crud-storage',
+        tags = {
+            ['module'] = TRACING_MODULE,
+        }
+    }
+)
 
 
 function select_module.init()
