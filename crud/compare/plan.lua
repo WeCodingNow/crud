@@ -3,7 +3,7 @@ local errors = require('errors')
 local compare_conditions = require('crud.compare.conditions')
 local utils = require('crud.common.utils')
 local dev_checks = require('crud.common.dev_checks')
-local tracing = require('tracing_decorator')
+local tracing_decorator = require('tracing_decorator')
 
 local compat = require('crud.common.compat')
 local has_keydef = compat.exists('tuple.keydef', 'key_def')
@@ -52,7 +52,15 @@ local function get_index_for_condition(space_indexes, space_format, condition)
         end
     end
 end
-get_index_for_condition = tracing.decorate(get_index_for_condition, 'get_index_for_condition')
+get_index_for_condition = tracing_decorator.decorate(
+    get_index_for_condition, 'get_index_for_condition',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.compare.plan',
+        }
+    }
+)
 
 local function extract_sharding_key_from_conditions(conditions, sharding_index, space_indexes, fieldno_map)
     dev_checks('table', 'table', 'table', 'table')
@@ -105,7 +113,15 @@ local function extract_sharding_key_from_conditions(conditions, sharding_index, 
 
     return sharding_key
 end
-extract_sharding_key_from_conditions = tracing.decorate(extract_sharding_key_from_conditions, 'extract_sharding_key_from_conditions')
+extract_sharding_key_from_conditions = tracing_decorator.decorate(
+    extract_sharding_key_from_conditions, 'extract_sharding_key_from_conditions',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.compare.plan',
+        }
+    }
+)
 
 local function get_sharding_key_from_scan_value(scan_value, scan_index, scan_iter, sharding_index)
     dev_checks('?', 'table', 'number', 'table')
@@ -131,7 +147,15 @@ local function get_sharding_key_from_scan_value(scan_value, scan_index, scan_ite
 
     return nil
 end
-get_sharding_key_from_scan_value = tracing.decorate(get_sharding_key_from_scan_value, 'get_sharding_key_from_scan_value')
+get_sharding_key_from_scan_value = tracing_decorator.decorate(
+    get_sharding_key_from_scan_value, 'get_sharding_key_from_scan_value',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.compare.plan',
+        }
+    }
+)
 
 -- We need to construct after_tuple by field_names
 -- because if `fields` option is specified we have after_tuple with partial fields
@@ -303,7 +327,15 @@ function plan.new(space, conditions, opts)
 
     return plan
 end
-plan.new = tracing.decorate(plan.new, 'plan.new')
+plan.new = tracing_decorator.decorate(
+    plan.new, 'plan.new',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.compare.plan',
+        }
+    }
+)
 
 plan.internal = {
     get_sharding_key_from_scan_value = get_sharding_key_from_scan_value,

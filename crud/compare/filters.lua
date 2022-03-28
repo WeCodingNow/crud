@@ -39,6 +39,7 @@ local function is_early_exit_possible(index, tarantool_iter, condition)
 
     return false
 end
+-- is_early_exit_possible = 
 
 local function get_index_fieldnos(index)
     local index_fieldnos = {}

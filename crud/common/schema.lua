@@ -4,7 +4,7 @@ local digest = require('digest')
 local vshard = require('vshard')
 local errors = require('errors')
 local log = require('log')
-local tracing = require('tracing_decorator')
+local tracing_decorator = require('tracing_decorator')
 
 local ReloadSchemaError = errors.new_class('ReloadSchemaError', {capture_stack = false})
 
@@ -25,6 +25,15 @@ local function call_reload_schema_on_replicaset(replicaset, channel)
     replicaset.master.conn:reload_schema()
     channel:put(true)
 end
+call_reload_schema_on_replicaset = tracing_decorator.decorate(
+    call_reload_schema_on_replicaset, 'call_reload_schema_on_replicaset',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        }
+    }
+)
 
 local function call_reload_schema(replicasets)
     local replicasets_num = table_len(replicasets)
@@ -49,6 +58,15 @@ local function call_reload_schema(replicasets)
 
     return true
 end
+call_reload_schema = tracing_decorator.decorate(
+    call_reload_schema, 'call_reload_schema',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        }
+    }
+)
 
 local reload_in_progress = false
 local reload_schema_cond = fiber.cond()
@@ -72,6 +90,15 @@ local function reload_schema(replicasets)
 
     return true
 end
+reload_schema = tracing_decorator.decorate(
+    reload_schema, 'reload_schema',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        }
+    }
+)
 
 -- schema.wrap_func_reload calls func with specified arguments.
 -- func should return `res, err, need_reload`
@@ -106,7 +133,15 @@ function schema.wrap_func_reload(func, ...)
 
     return res, err
 end
-schema.wrap_func_reload = tracing.decorate(schema.wrap_func_reload, 'schema.wrap_func_reload')
+schema.wrap_func_reload = tracing_decorator.decorate(
+    schema.wrap_func_reload, 'schema.wrap_func_reload',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 local function get_space_schema_hash(space)
     if space == nil then
@@ -135,6 +170,15 @@ local function get_space_schema_hash(space)
 
     return digest.murmur(msgpack.encode(space_info))
 end
+get_space_schema_hash = tracing_decorator.decorate(
+    get_space_schema_hash, 'get_space_schema_hash',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 function schema.filter_obj_fields(obj, field_names)
     if field_names == nil or obj == nil then
@@ -149,6 +193,15 @@ function schema.filter_obj_fields(obj, field_names)
 
     return result
 end
+schema.filter_obj_fields = tracing_decorator.decorate(
+    schema.filter_obj_fields, 'schema.filter_obj_fields',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 local function filter_tuple_fields(tuple, field_names)
     if field_names == nil or tuple == nil then
@@ -163,6 +216,15 @@ local function filter_tuple_fields(tuple, field_names)
 
     return result
 end
+filter_tuple_fields = tracing_decorator.decorate(
+    filter_tuple_fields, 'filter_tuple_fields',
+    {
+        component = 'crud-storage',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 function schema.filter_tuples_fields(tuples, field_names)
     dev_checks('?table', '?table')
@@ -180,6 +242,15 @@ function schema.filter_tuples_fields(tuples, field_names)
 
     return result
 end
+schema.filter_tuples_fields = tracing_decorator.decorate(
+    schema.filter_tuples_fields, 'schema.filter_tuples_fields',
+    {
+        component = 'crud-storage',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 function schema.truncate_row_trailing_fields(tuple, field_names)
     dev_checks('table|tuple', 'table')
@@ -198,6 +269,15 @@ function schema.truncate_row_trailing_fields(tuple, field_names)
 
     return tuple
 end
+schema.truncate_row_trailing_fields = tracing_decorator.decorate(
+    schema.truncate_row_trailing_fields, 'schema.truncate_row_trailing_fields',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 function schema.wrap_func_result(space, func, args, opts)
     dev_checks('table', 'function', 'table', 'table')
@@ -218,7 +298,15 @@ function schema.wrap_func_result(space, func, args, opts)
 
     return result
 end
-
+schema.wrap_func_result = tracing_decorator.decorate(
+    schema.wrap_func_result, 'schema.wrap_func_result',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 -- schema.wrap_box_space_func_result pcalls some box.space function
 -- and returns its result as a table
 -- `{res = ..., err = ..., space_schema_hash = ...}`
@@ -232,6 +320,15 @@ function schema.wrap_box_space_func_result(space, box_space_func_name, box_space
 
     return schema.wrap_func_result(space, func, {space, box_space_func_name, box_space_func_args}, opts)
 end
+schema.wrap_func_result = tracing_decorator.decorate(
+    schema.wrap_func_result, 'schema.wrap_func_result',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 -- schema.result_needs_reload checks that schema reload can
 -- be helpful to avoid storage error.
@@ -245,5 +342,14 @@ function schema.result_needs_reload(space, result)
     end
     return result.space_schema_hash ~= get_space_schema_hash(space)
 end
+schema.result_needs_reload = tracing_decorator.decorate(
+    schema.result_needs_reload, 'schema.result_needs_reload',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.schema',
+        },
+    }
+)
 
 return schema

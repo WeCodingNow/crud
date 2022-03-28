@@ -4,7 +4,7 @@ local errors = require('errors')
 local dev_checks = require('crud.common.dev_checks')
 local utils = require('crud.common.utils')
 local fiber_clock = require('fiber').clock
-local tracing = require('tracing_decorator')
+local tracing_decorator = require('tracing_decorator')
 
 local CallError = errors.new_class('CallError')
 local NotInitializedError = errors.new_class('NotInitialized')
@@ -39,7 +39,15 @@ function call.get_vshard_call_name(mode, prefer_replica, balance)
     -- prefer_replica and balance
     return 'callbre'
 end
-call.get_vshard_call_name = tracing.decorate(call.get_vshard_call_name , 'call.get_vshard_call_name')
+call.get_vshard_call_name = tracing_decorator.decorate(
+    call.get_vshard_call_name , 'call.get_vshard_call_name',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.call',
+        }
+    }
+)
 
 
 local function wrap_vshard_err(err, func_name, replicaset_uuid, bucket_id)
@@ -70,6 +78,16 @@ local function wrap_vshard_err(err, func_name, replicaset_uuid, bucket_id)
         replicaset_uuid, "Function returned an error: %s", err
     ))
 end
+wrap_vshard_err = tracing_decorator.decorate(
+    wrap_vshard_err, 'wrap_vshard_err',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.call',
+        }
+    }
+)
+
 
 function call.map(func_name, func_args, opts)
     dev_checks('string', '?table', {
@@ -127,7 +145,15 @@ function call.map(func_name, func_args, opts)
 
     return results
 end
-call.map = tracing.decorate(call.map, 'call.map')
+call.map = tracing_decorator.decorate(
+    call.map, 'call.map',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.call',
+        }
+    }
+)
 
 function call.single(bucket_id, func_name, func_args, opts)
     dev_checks('number', 'string', '?table', {
@@ -158,7 +184,15 @@ function call.single(bucket_id, func_name, func_args, opts)
 
     return res
 end
-call.single = tracing.decorate(call.single, 'call.single')
+call.single = tracing_decorator.decorate(
+    call.single, 'call.single',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.call',
+        }
+    }
+)
 
 function call.any(func_name, func_args, opts)
     dev_checks('string', '?table', {
@@ -186,6 +220,14 @@ function call.any(func_name, func_args, opts)
 
     return res
 end
-call.any = tracing.decorate(call.any, 'call.any')
+call.any = tracing_decorator.decorate(
+    call.any, 'call.any',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.call',
+        }
+    }
+)
 
 return call

@@ -3,13 +3,29 @@ local msgpack = require('msgpack')
 local ffi = require('ffi')
 local call = require('crud.common.call')
 local tracing = require('tracing_decorator')
+local tracing_decorator = require('tracing_decorator')
 
 local compat = require('crud.common.compat')
 local merger_lib = compat.require('tuple.merger', 'merger')
 
 local Keydef = require('crud.compare.keydef')
 
-local TRACING_MODULE = 'crud.select.compat.merger'
+merger_lib.new = tracing_decorator.decorate(
+    merger_lib.new, 'merger_lib.new', {
+        component = 'crud-router',
+        tags = {
+            module = 'merger_lib',
+        }
+    }
+)
+merger_lib.new_buffer_source = tracing_decorator.decorate(
+    merger_lib.new_buffer_source, 'merger_lib.new_buffer_source', {
+        component = 'crud-router',
+        tags = {
+            module = 'merger_lib',
+        }
+    }
+)
 
 local function bswap_u16(num)
     return bit.rshift(bit.bswap(tonumber(num)), 16)
@@ -132,8 +148,9 @@ end
 fetch_chunk = tracing.decorate(
     fetch_chunk, 'fetch_chunk',
     {
+        component = 'crud-router',
         tags = {
-            ['module'] = TRACING_MODULE,
+            module = 'crud.select.merger',
         }
     }
 )
@@ -193,7 +210,7 @@ local function new(replicasets, space, index_id, func_name, func_args, opts)
 
     return merger
 end
-new = tracing.decorate(new, 'merger.new')
+-- new = tracing.decorate(new, 'merger.new')
 
 return {
     new = new,

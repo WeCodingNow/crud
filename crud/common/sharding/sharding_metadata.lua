@@ -7,7 +7,7 @@ local dev_checks = require('crud.common.dev_checks')
 local cache = require('crud.common.sharding.sharding_metadata_cache')
 local sharding_func = require('crud.common.sharding.sharding_func')
 local sharding_key = require('crud.common.sharding.sharding_key')
-local tracing = require('tracing_decorator')
+local tracing_decorator = require('tracing_decorator')
 
 local FetchShardingMetadataError = errors.new_class('FetchShardingMetadataError', {capture_stack = false})
 
@@ -58,7 +58,15 @@ local function extract_sharding_func_def(tuple)
 
     return nil
 end
-extract_sharding_func_def = tracing.decorate(extract_sharding_func_def, 'extract_sharding_func_def')
+extract_sharding_func_def = tracing_decorator.decorate(
+    extract_sharding_func_def, 'extract_sharding_func_def',
+    {
+        component = 'crud-storage',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
+)
 
 -- Return a map with metadata or nil when spaces box.space._ddl_sharding_key and
 -- box.space._ddl_sharding_func are not available on storage.
@@ -97,7 +105,15 @@ function sharding_metadata_module.fetch_on_storage()
 
     return metadata_map
 end
-sharding_metadata_module.fetch_on_storage = tracing.decorate(sharding_metadata_module.fetch_on_storage, 'sharding_metadata_module.fetch_on_storage')
+sharding_metadata_module.fetch_on_storage = tracing_decorator.decorate(
+    sharding_metadata_module.fetch_on_storage, 'sharding_metadata_module.fetch_on_storage',
+    {
+        component = 'crud-storage',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
+)
 
 -- Under high load we may get a case when more than one fiber will fetch
 -- metadata from storages. It is not good from performance point of view.
@@ -134,7 +150,15 @@ local _fetch_on_router = locked(function(timeout, space_name, metadata_map_name)
         return err
     end
 end)
-_fetch_on_router = tracing.decorate(_fetch_on_router, '_fetch_on_router')
+_fetch_on_router = tracing_decorator.decorate(
+    _fetch_on_router, '_fetch_on_router',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
+)
 
 local function fetch_on_router(space_name, metadata_map_name, timeout)
     if cache[metadata_map_name] ~= nil then
@@ -154,7 +178,15 @@ local function fetch_on_router(space_name, metadata_map_name, timeout)
     return nil, FetchShardingMetadataError:new(
         "Fetching sharding key for space '%s' is failed", space_name)
 end
-fetch_on_router = tracing.decorate(fetch_on_router, 'fetch_on_router')
+fetch_on_router = tracing_decorator.decorate(
+    fetch_on_router, 'fetch_on_router',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
+)
 
 -- Get sharding index for a certain space.
 --
@@ -170,9 +202,14 @@ function sharding_metadata_module.fetch_sharding_key_on_router(space_name, timeo
 
     return fetch_on_router(space_name, cache.SHARDING_KEY_MAP_NAME, timeout)
 end
-sharding_metadata_module.fetch_sharding_key_on_router = tracing.decorate(
-    sharding_metadata_module.fetch_sharding_key_on_router,
-    'sharding_metadata_module.fetch_sharding_key_on_router'
+sharding_metadata_module.fetch_sharding_key_on_router = tracing_decorator.decorate(
+    sharding_metadata_module.fetch_sharding_key_on_router, 'sharding_metadata_module.fetch_sharding_key_on_router',
+    {
+        component = 'crud-router',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
 )
 
 -- Get sharding func for a certain space.
@@ -189,9 +226,14 @@ function sharding_metadata_module.fetch_sharding_func_on_router(space_name, time
 
     return fetch_on_router(space_name, cache.SHARDING_FUNC_MAP_NAME, timeout)
 end
-sharding_metadata_module.fetch_sharding_func_on_router = tracing.decorate(
-    sharding_metadata_module.fetch_sharding_func_on_router,
-    'get_index_for_condition'
+sharding_metadata_module.fetch_sharding_func_on_router = tracing_decorator.decorate(
+    sharding_metadata_module.fetch_sharding_func_on_router, 'sharding_metadata_module.fetch_sharding_func_on_router',
+    {
+        component = 'crud-storage',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
 )
 
 function sharding_metadata_module.update_sharding_key_cache(space_name)
@@ -199,9 +241,14 @@ function sharding_metadata_module.update_sharding_key_cache(space_name)
 
     return sharding_metadata_module.fetch_sharding_key_on_router(space_name)
 end
-sharding_metadata_module.update_sharding_key_cache = tracing.decorate(
-    sharding_metadata_module.update_sharding_key_cache,
-    'sharding_metadata_module.update_sharding_key_cache'
+sharding_metadata_module.update_sharding_key_cache = tracing_decorator.decorate(
+    sharding_metadata_module.update_sharding_key_cache, 'sharding_metadata_module.update_sharding_key_cache',
+    {
+        component = 'crud-storage',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
 )
 
 function sharding_metadata_module.update_sharding_func_cache(space_name)
@@ -209,9 +256,14 @@ function sharding_metadata_module.update_sharding_func_cache(space_name)
 
     return sharding_metadata_module.fetch_sharding_func_on_router(space_name)
 end
-sharding_metadata_module.update_sharding_func_cache = tracing.decorate(
-    sharding_metadata_module.update_sharding_func_cache,
-    'sharding_metadata_module.update_sharding_func_cache'
+sharding_metadata_module.update_sharding_func_cache = tracing_decorator.decorate(
+    sharding_metadata_module.update_sharding_func_cache, 'sharding_metadata_module.update_sharding_func_cache',
+    {
+        component = 'crud-storage',
+        tags = {
+            module = 'crud.common.sharding.sharding_metadata',
+        }
+    }
 )
 
 function sharding_metadata_module.init()
